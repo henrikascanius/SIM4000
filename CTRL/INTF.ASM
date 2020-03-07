@@ -9,6 +9,10 @@
 ;*****             These routines run in protected mode.
 ;*****
 ;**********************************************************************
+;***** Channge history:
+;***** 94-11-13 22:34 HJ Cleanup code from prev. versions in _Run8000
+;*****
+;**********************************************************************
 
         MASM 
         .386P
@@ -20,10 +24,10 @@
         INCLUDE MACROS.ASM
 
 
-fetch   EQU     4000H
-run     EQU     4040H
-BadOp   EQU     4100H
-Break   EQU     4180H
+run_p   EQU     4000H
+BadOp_p EQU     4004H
+Break_p EQU     4008H
+
 
 Base8259_1 EQU  20H     ; IO base of primary interrupt controller
 IntBase_1  EQU  8       ; Interrupt base of primary interrupt controller
@@ -192,9 +196,9 @@ dr1save DD      ?       ; save DR1 during interrupt simulation
 dr2save DD      ?       ; save DR2 during interrupt simulation
 dr7save DD      ?       ; save DR7 during interrupt simulation
 
-XXX     DW      ?       ; Test: timer counter
-XXXLimit EQU 182 ; 10 secs
-
+Run     DP      ?       ; Copy of Run entry point
+BadOp   DP      ?       ; Copy of Bad Opcode entry point
+Break   DP      ?       ; Copy of Break entry point
 
 DATA    ENDS
 
@@ -240,11 +244,23 @@ _SetBreakSeg PROC FAR
         mov     ds,ax
         InitSRegs
         EmptyPMIStack
+
+        mov     ax,SCode                ; Init. pointers to aux. routines
+        mov     es,ax
+        mov     ebx,es:DWORD PTR [run_p]
+        mov     DWORD PTR [Run],ebx
+        mov     WORD PTR [Run+4],ax
+        mov     ebx,es:DWORD PTR [BadOp_p]
+        mov     DWORD PTR [BadOp],ebx
+        mov     WORD PTR [BadOp+4],ax
+        mov     ebx,es:DWORD PTR [break_p]
+        mov     DWORD PTR [Break],ebx
+        mov     WORD PTR [Break+4],ax
         mov     ax,BreakSeg
         mov     es,ax
         ChkSti
 
-        mov     eax,Break
+        mov     eax,DWORD PTR [Break]
         mov     ecx,4096
         xor     edi,edi
         cld
@@ -292,16 +308,12 @@ _Run8000  PROC FAR
 
 
         ; set debug registers
-        ; USE: DR0: Interrupt from IR / Trace (at "fetch")
+        ; USE: DR0: Not used (anymore)
         ;      DR1: Step breakpoint (at IC+2)
         ;      DR2: User-defined breakpoint
 
         xor     ebx,ebx         ; Build DR7 in ebx
         mov     dr7,ebx         ; disable all (to avoid ooops'es)
-
-        mov     eax,fetch       ; DR0 always = "fetch" Brp. turned on dynamic.
-        add     eax,CodeBase
-        mov     dr0,eax
 
         test    State8000.Step,1
         jz      @@1
@@ -314,7 +326,7 @@ _Run8000  PROC FAR
         or      ebx,00300008H   ; Brp1 Global, R/W
 @@1:
         test    State8000.Trace,1
-        jnz     @@4             ; jump if trace
+        jnz     @@2
 
         mov     eax,State8000.Brp
         inc     eax
@@ -331,18 +343,9 @@ _Run8000  PROC FAR
         add     eax,CoreBase
         mov     dr2,eax
 @@2:
-        ; Test for pending interrupt could be done here
-        ; But for assembler-technical reasons(!!!) we just always make
-        ; a break at fetch the first time
-
-@@4:                            ; Set Brp. at "fetch" address
-        or      ebx,2           ; Brp0 Global, execute
-
-@@5: 
         ; ***** dr7 set AFTER fetch of 1st instr. ****
-        ; DON't FIDDLE AROUND WITH EBX AFTER HERE!
+        ; DON'T FIDDLE AROUND WITH EBX AFTER HERE!
 
-;        mov     dr7,ebx         ; Set control reg. 
         
         xor     eax,eax
         mov     dr6,eax         ; clear status reg.
@@ -360,14 +363,8 @@ _Run8000  PROC FAR
         shl     esi,2
         mov     State8000.Running,1
 
-;               mov     XXX,0           ; ******
-;               sti
-;               mov     ax,VCPIDS
-;               mov     ds,ax                           ; SYNC TO TIMER ********
-;               mov     al,DS:BYTE PTR [46CH]
-;       @@x:    cmp     al,DS:BYTE PTR [46CH]
-;               je      @@x
-
+        push    ds
+        pop     fs              ; used later
 
         mov     ax,CoreSeg
         mov     ds,ax   
@@ -377,15 +374,9 @@ _Run8000  PROC FAR
 
         mov     ax,SCode
         mov     gs,ax           ; entry table segment
-        push    eax             ; Put entry point on stack
-        push    run
- 
-                                ; (Avoid jumping directly to "fetch", where
-                                ; the breakpoint is triggered. We want to 
-                                ; execute at leat one instruction).
 
         sti
-        retf    ; RUN!!!
+        jmp     fs:Run          ; fs holds PascData decr.
 
 _Run8000  ENDP
 
@@ -1070,13 +1061,13 @@ hw1_not:
         cmp     bl,0DH                  ; GP Fault?
         jne     ih_common
 
-        PopSegs                         ; GP fault assumed to be address viol.
+        mov     ebx,DWORD PTR [BadOp]   ; GP fault assumed to be address viol.
+        PopSegs                         
+        mov     eax,esp
+        mov     DWORD PTR ss:[eax+40],ebx; Modify offset part of return adresss
         popad
         pop     ds
-        add     sp,10                   ; CALL-addr + 32-bit error code + 
-                                        ; offset of interrupt return
-        push    0
-        push    BadOp                   ; Make instr. exception
+        add     sp,6                    ; CALL-addr + 32-bit error code
         iretd
 
 ;**********************************************************************

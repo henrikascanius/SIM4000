@@ -4,8 +4,8 @@
 (* Unit name      : CLOCK.PAS
 (* Pascal Version : Borland Pascal 7.0
 (* Change History :
-(* 93-02-19 23:05   HJ Initial version
-(*
+(* 93-02-19 23:05 HJ Initial version
+(* 94-11-13 23:13 HJ Avoid RC clock interrupt during trace
 (*
 (**********************************************************************)
 
@@ -192,7 +192,8 @@ PROCEDURE ClockDevice.IntrAction (VAR Param);
 
 BEGIN
    Inc(_Cnt);
-   WITH State8000 DO IR := IR OR (LONGINT(1) SHL (31-_Int));
+   WITH State8000 DO
+      IF NOT Trace THEN IR := IR OR (LONGINT(1) SHL (31-_Int));
 END; (* ClockDevice.IntrAction *)
 
 (*#CPAGE 20*)

@@ -111,7 +111,7 @@ _lx     MACRO   wreg            ; Logical xor
 ;**********************************************************************
 
 _sx     MACRO wreg              ; Skip if no exception
-        LOCAL @@1,@@2,@@3
+        LOCAL @@1,@@2,@@3,@@4
 
         jnc     @@1
         or      cl,cl           ; test Ex(23)
@@ -123,6 +123,11 @@ _sx     MACRO wreg              ; Skip if no exception
         or      ch,ch           ; test Ex(22)
         jnz     @@2
 @@3:
+        shr     al,1
+        jnc     @@4
+        test    S8.Ex21,4
+        jnz     @@2             ; test Ex(21)
+@@4:
         add     esi,4
 @@2:
         incic

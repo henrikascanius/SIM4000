@@ -63,21 +63,24 @@ PROCEDURE LoadCodeExt;
 
 TYPE
    BUFTYPE = ARRAY [0..2047] OF WORD;
-   TABTYPE = ARRAY [0..4095] OF LONGINT;  (* Entry table *)
+   TABTYPE = ARRAY [0..4500] OF LONGINT;  (* Entry table *)
 
 CONST
-   BadOpcodeEntry = $4100;  (* Must match 8000.ASM *)
+   TotalTableSize = 16384+12;  (* Must match UCHEAD.ASM *)
+   Initial4KPages = (TotalTableSize+4095) DIV 4096;
 
 VAR
    Cnt,
    I: WORD;
    Fno: BYTE;
    F:   FILE;
-   Fname: STRING[16];
+   Fname: STRING[80];
    Op,
    CodeAddr,
    CodeSize,
    CodeBase: LONGINT;
+   Blk,
+   Res,
    Rem: WORD;
    BufP: ^BUFTYPE;
    TabP: ^TABTYPE;
@@ -94,10 +97,10 @@ BEGIN
    IF NOT GetMemCheck(BufP,4096) THEN
       FatalError('LoadCodeExt get buffer: No heap memory');
 
-   IF NOT GetMemCheck(TabP,16384) THEN
+   IF NOT GetMemCheck(TabP,TotalTableSize) THEN
       FatalError('LoadCodeExt get table: No heap memory');
 
-   FOR I := 0 TO 4095 DO TabP^[I] := BadOpcodeEntry;
+   FOR I := 0 TO TotalTableSize DIV 4 DO TabP^[I] := 0;
 
    WITH GDT.SimCodeD DO
    BEGIN
@@ -106,20 +109,20 @@ BEGIN
       SetLimit($FFFFF);
    END;
 
-   IF Avail4KPages < 4 THEN 
+   IF Avail4KPages < Initial4KPages THEN 
       FatalError('No room for entry table');
 
-   FOR I := 1 TO 4 DO
+   FOR I := 1 TO Initial4KPages DO
       Allocate4K;
 
-   CodeAddr := 16384; (* Load address for code *)
-   Rem := 0;          (* remaining doublewords in last 4K page *)
+   CodeAddr := TotalTableSize; (* Load address for code *)
+   Rem := Initial4KPages*4096 - TotalTableSize;  (* remaining bytes in last 4K page *)
 
    FOR Fno := 0 TO 35 DO
    BEGIN
       IF Fno > 9 
-         THEN Fname := UCodePrefix + '8000.'+Chr(Fno - 10 +65)
-         ELSE Fname := UCodePrefix + '8000.'+Chr(Fno MOD 10 +48);
+         THEN Fname := UCodePrefix + '4000_'+Chr(Fno - 10 +65)+'.ABS'
+         ELSE Fname := UCodePrefix + '4000_'+Chr(Fno MOD 10 +48)+'.ABS';
       Assign(F,Fname);
 {$I-}
       Reset(F,1);
@@ -127,26 +130,26 @@ BEGIN
       IF IoResult = 0 THEN
       BEGIN
          WriteLn('Loading ',Fname);
-         CodeSize := FileSize(F) - 8192;
+         CodeSize := FileSize(F) - TotalTableSize DIV 2;
          IF CodeSize < 0 THEN
             FatalError('Bad file size: '+Fname);
 
          (* Load the entry table entries *)
          
-         CodeBase := CodeAddr-8192;  (* Code rel. to first image (8000.0)
-                                        Displacement of 8000.0 is 8K to
-                                        account for the fact that the
-                                        entry table is 8K bigger when loaded
-                                        than it is in the file (see above) *)
-         FOR I := 0 TO 1 DO  (* split in two blocks for convenience *)
+         CodeBase := CodeAddr-TotalTableSize DIV 2;
+
+         Cnt := TotalTableSize DIV 2; 
+         WHILE Cnt > 0 DO
          BEGIN
-            BlockRead(F,BufP^,4096,Cnt);
-            IF Cnt <> 4096 THEN
+            IF Cnt < 4096 THEN Blk := Cnt ELSE Blk := 4096;
+            BlockRead(F,BufP^,Blk,Res);
+            IF Blk <> Res THEN
                FatalError('LoadCode: BlockRead???');
 
-            FOR Op := 0 TO 2047 DO
+            FOR Op := 0 TO Blk DIV 2 -1 DO
             IF BufP^[Op] <> 0 
-               THEN TabP^[Op + (I SHL 11)] := BufP^[Op] + CodeBase;
+               THEN TabP^[Op + (TotalTableSize DIV 2 -Cnt) SHR 1] := BufP^[Op] + CodeBase;
+            Dec(Cnt,Blk);
          END;
 
          (* Load the code proper *)
@@ -171,17 +174,17 @@ BEGIN
             END;
          END;
          Close(F);
-      END ELSE
-         IF Fno = 0 THEN
-            FatalError('8000.0 not found');
+      END;
 
    END;
 
    (* All files loaded, now put the entry table in place *)
-   ToCode(0,16384,TabP);
+   FOR I := 0 TO 4095 DO
+   IF TabP^[I] = 0 THEN TabP^[I] := Tabp^[4097];   (*******)
+   ToCode(0,TotalTableSize,TabP);
 
    FreeMemCheck(BufP,4096);
-   FreeMemCheck(TabP,16384);
+   FreeMemCheck(TabP,TotalTableSize);
 
    (* Init. descriptor *)      
    WITH GDT.SimCode DO

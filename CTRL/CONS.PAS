@@ -94,6 +94,7 @@ TYPE
                         _Height,
                         _Width    : BYTE;
                         _VideoMode: WORD;
+                        _PrintFlag: BOOLEAN;
 
                         Scrn      : ConsScreen;
 
@@ -164,6 +165,7 @@ USES
 
 CONST
    DATE_HOTKEY  = $2000;  (* Alt-D *)
+   PRINT_HOTKEY = $1900;  (* Alt-P *)
 
    (*  addr. of 8250 regs: *)
 
@@ -188,6 +190,9 @@ TYPE
 
 VAR
    ComIntrHndlr: ComIntrHandler;   (* Common for all COM devices *)
+{$IFDEF CONSDUMP}
+   DF: TEXT;
+{$ENDIF}
 
 (*#CPAGE 20*)
 (**********************************************************************)
@@ -286,6 +291,7 @@ BEGIN
    _Busy := FALSE;
    _TimeoutVal := 1;
    _EchoOnSense := FALSE;
+
 END; (* GenericConsDevice.Init *)
 
 (*#CPAGE 20*)
@@ -443,7 +449,42 @@ BEGIN
    INHERITED Init(DevNo,IoInt,OprInt);
    Scrn.Init(ConsNo,_Height,_Width,_VideoMode);
    KeybHndlr.InsHook(Self);
+   _PrintFlag := FALSE;
 END; (* ConsDevice.Init *)
+
+FUNCTION GetLptStatus(LPTNo : Word) : WORD;
+  Inline(
+    $5A/                   {  pop   dx}
+    $B4/$02/               {  mov   ah,2}
+    $CD/$17/               {  int   $17}     
+    $86/$C4/               {  xchg  ah,al}
+    $30/$E4);              {  xor   ah,ah} 
+
+
+FUNCTION LptReady(ErrorCode : Word) : BOOLEAN;
+  {-Printer ready test, verifies SELECTTED, not PAPER OUT, not IO ERROR,
+    not BUSY }
+Inline(
+  $58/                   {  pop     ax}
+  $34/$90/               {  xor     al,$90 ; invert SELECTED, NOT BUSY}
+  $A8/$B8/               {  test    al,$B8}
+  $75/$04/               {  jnz     PrnError}
+  $B0/$01/               {  mov     al,1}
+  $EB/$02/               {  jmp     short ExitPoint}
+                         {PrnError:}
+  $30/$C0);              {  xor     al,al}
+                         {ExitPoint:}
+
+FUNCTION Int17Out(Ch : Char; LPTNo : Word) : BYTE;
+{ send a character to LPTNo via ROM BIOS int 17h func 0h }
+Inline(
+  $5A/                   {  pop  dx        ; get printer number}
+  $58/                   {  pop  ax        ; get character}
+  $30/$E4/               {  xor  ah,ah     ; set AH for func 0}
+  $CD/$17/               {  int  $17       ; printer bios function call}
+  $86/$E0);              {  xchg al,ah     ; put byte result in AL}
+
+
 
 (*#CPAGE 20*)
 (**********************************************************************)
@@ -454,6 +495,16 @@ PROCEDURE ConsDevice.WriteChar (C: CHAR);
 
 BEGIN
    Scrn.OutChar(C);
+
+{$IFDEF CONSDUMP}
+   IF (_DevNo=2) AND ((C > #31) OR (C = #10)) AND (C<>#127) THEN Write(DF,C);
+{$ENDIF}
+
+   IF _PrintFlag AND (C<>#127) THEN
+   BEGIN
+      WHILE NOT LptReady(GetLptStatus(0)) DO;
+      Int17Out(C,0);
+   END;
 END; (* ConsDevice.WriteChar *)
 
 
@@ -564,6 +615,9 @@ BEGIN
          IR := IR OR (LONGINT(1) SHL (31-_OprInt));
       END ELSE
 
+{$IFDEF ALTPHARDCPY}
+      IF Key = PRINT_HOTKEY THEN _PrintFlag := NOT _PrintFlag ELSE
+{$ENDIF}
       BEGIN
          IF _Busy AND IsEmpty
             THEN KeyAvail(Key)
@@ -860,6 +914,9 @@ PROCEDURE UnitExit;
 
 BEGIN
    Exitproc := ExitSave;
+{$IFDEF CONSDUMP}
+   Close(DF);
+{$ENDIF}
 END; (* UnitExit *)
 
 
@@ -877,6 +934,11 @@ BEGIN
    Exitproc := @UnitExit;
 
    ComIntrHndlr.Init;
+{$IFDEF CONSDUMP}
+   Assign(DF,'CONSDUMP.OUT');
+   Rewrite(DF);
+{$ENDIF}
+
 END; (* UnitEntry *)
 
 

@@ -1,8 +1,18 @@
 
-InsEntry MACRO No
+InsEntry MACRO No       ; Insert opcode
 
 Addr    =       $
         ORG     (No*2)+100h
+        dw      SMALL Addr - 100H   ; 100H comes from .COM file offset
+        ORG     Addr
+
+        ENDM
+
+
+InsPoint MACRO Ref      ; Insert in ref. table
+
+Addr    =       $
+        ORG     Ref+100h
         dw      SMALL Addr - 100H   ; 100H comes from .COM file offset
         ORG     Addr
 

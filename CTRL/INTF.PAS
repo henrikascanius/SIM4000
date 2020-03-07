@@ -57,6 +57,7 @@ TYPE
                      BreakPoint  : LONGINT;
                      Ex23        : 0..1;
                      Ex22        : 0..1;
+                     Ex21        : 0..4;
                      IntEn       : BOOLEAN;
                      ResetKey    : BOOLEAN;
                      AutoloadKey : BOOLEAN;
@@ -90,6 +91,7 @@ CONST
                      BreakPoint  : -1;
                      Ex23        : 0;
                      Ex22        : 0;
+                     Ex21        : 0;
                      IntEn       : FALSE;
                      ResetKey    : FALSE;
                      AutoloadKey : FALSE;

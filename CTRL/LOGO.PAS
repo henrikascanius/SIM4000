@@ -24,6 +24,7 @@ UNIT LOGO;
 INTERFACE
 
 PROCEDURE PopUpLogo(Attr: BYTE);
+{$I VERSION.INC}
 
 
 (*#PAGE*)
@@ -38,7 +39,6 @@ USES
    OpCrt;
 
 
-{$I VERSION.INC}
 
 (*#CPAGE 20*)
 (**********************************************************************)

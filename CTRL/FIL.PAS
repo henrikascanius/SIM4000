@@ -41,6 +41,7 @@ USES
 
 PROCEDURE SaveFile;
 PROCEDURE LoadFile;
+PROCEDURE AutoloadMonitor(FName: STRING; SetInitSwitch: BOOLEAN);
 
 (*#PAGE*)
 IMPLEMENTATION
@@ -388,12 +389,13 @@ BEGIN
 
 {$I+}
 END; (* DoLoad *)
+
 (*#CPAGE 20*)
 (**********************************************************************)
-(* Proc. Name     : DoLoad2            *** SPECIAL VERSION ***
-(* Function       : See LoadFile
+(* Proc. Name     : AutoloadMonitor   
+(* Function       : Autoloads monitor placed in a DOS file
 (**********************************************************************)
-PROCEDURE DoLoad2;
+PROCEDURE AutoloadMonitor(FName: STRING; SetInitSwitch: BOOLEAN);
 
 CONST
    BlkSize  = 2048;        (* RC8000 words *)
@@ -406,30 +408,36 @@ VAR
    F: FILE;
    CoreBufP,
    FileBufP: ^Buf;
+   L,
+   LoadAddr,
    Blk,
    Addr,
    Words: LONGINT;
    I,J: WORD;
 
 BEGIN
-   Assign(F,UR.FName);
+   IF Pos('\',FName) = 0 THEN FName := JustPathname(ParamStr(0)) + '\' + FName;
+   Assign(F,FName);
 {$I-}
    Reset(F,1);
    IF IOResult <> 0 THEN
    BEGIN
-      PopErr('Could not open '+UR.FName);
+      PopErr('Could not open '+FName);
       Exit;
    END;
 
    IF NOT GetMemCheck(CoreBufP,BlkSize*4) OR
      (NOT GetMemCheck(FileBufP,BlkSizeF)) THEN
-         FatalError('DoLoad: No heap memory');
+         FatalError('AutoloadMonitor: No heap memory');
 
 
    FOR I := 0 TO (BlkSize-1) SHL 2 DO CoreBufP^[I] := 0;  (* 8 LSB must be 0 *)
 
-   Addr  := 65536;
-   Words := 14336;
+   LoadAddr  := CoreSize DIV 2;
+   Addr := LoadAddr;
+   Words := FileSize(F) DIV 3;
+   IF Addr + (Words SHL 1) > CoreSize
+      THEN FatalError('No room for monitor in core');
 
    WHILE Words > 0 DO
    BEGIN
@@ -465,8 +473,17 @@ BEGIN
    FreeMemCheck(CoreBufP,BlkSize*4);
    FreeMemCheck(FileBufP,BlkSizeF);
 
+   IF SetInitSwitch THEN
+   BEGIN  (* Set disc load flag for autostart *)
+      L := 2 SHL 8;
+      ToCore(LoadAddr+2,1,@L);
+   END;
+
+   L := (LoadAddr + 6) SHL 8;
+   ToCore(14,1,@L);   (* Set start key entry = monitor entry point *)
+   AutoStart := TRUE;
 {$I+}
-END; (* DoLoad *)
+END; (* AutoloadMonitor *)
 
 (*#CPAGE 20*)
 (**********************************************************************)

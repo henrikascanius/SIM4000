@@ -19,6 +19,7 @@ PAS_FILES   =   AUDIO.PAS    \
                 POPUP.PAS    \
                 PUNCH.PAS    \
                 RC4818.PAS   \
+                RC433.PAS    \
                 RC8000.PAS   \
                 RC851.PAS    \
                 READER.PAS   \

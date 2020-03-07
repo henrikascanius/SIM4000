@@ -11,6 +11,7 @@ IR              DD      0
 Brp             DD      0
 Ex23            DB      0
 Ex22            DB      0
+Ex21            DB      0
 IntEn           DB      0
 RstKey          DB      0
 AldKey          DB      0

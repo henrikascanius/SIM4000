@@ -47,7 +47,7 @@ FetchNext MACRO
         rol     eax,12
         mov     di,ax
         sar     eax,12                  ; place D-field as operand in EAX
-        jmp     gs:DWORD PTR optable[edi*4]
+        jmp     gs:DWORD PTR Optable[edi*4]
         ENDM
 
 
@@ -65,7 +65,7 @@ incicam MACRO                           ; increment IC
         mov     di,ax
         sar     eax,12                  ; place D-field as operand in EBX
         add     eax,ebx                 ; add to EA of prev. am instr.
-        jmp     cs:DWORD PTR optable[edi*4]
+        jmp     cs:DWORD PTR Optable[edi*4]
         ENDM
 
 

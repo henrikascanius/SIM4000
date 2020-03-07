@@ -39,6 +39,7 @@ USES
 
 CONST
   AutoAutoload: BOOLEAN = FALSE; 
+  AutoStart   : BOOLEAN = FALSE; 
 
   Frame1    : FrameArray = 'ÚÀ¿ÙÄÄ³³';  (* Window Frame def. *)
   Frame2    : FrameArray = 'ÉÈ»¼ÍÍºº';  (* Window Frame def. *)
@@ -254,7 +255,8 @@ PROCEDURE WinSys.Process;
 
 BEGIN
    IF CurrentWin = NIL THEN CurrentWin := DoubleListPtr(@Self)^.Head;
-   IF AutoAutoload THEN AutoloadButton;
+   IF AutoAutoload THEN AutoloadButton ELSE
+   IF AutoStart THEN StartButton;
    REPEAT
       WITH Win8000Ptr(CurrentWin)^ DO
       BEGIN
@@ -1213,6 +1215,9 @@ BEGIN
          2: S := 'IR:  ' + ToBin(IR);
          3: BEGIN
                S := 'EX:  ';
+               IF Ex21 = 4
+                  THEN S := S + '1'
+                  ELSE S := S + '0';
                IF Ex22 = 1
                   THEN S := S + '1'
                   ELSE S := S + '0';
@@ -1271,7 +1276,7 @@ BEGIN
          0: S := Long2Str(IC SHL 1);
          1: S := '2.'+ToBin(IM);
          2: S := '2.'+ToBin(IR);
-         3: S := '2.'+Chr(Ex22+48) + Chr(Ex23+48);
+         3: S := '2.'+Chr((Ex21 SHR 2)+48) + Chr(Ex22+48) + Chr(Ex23+48);
       END;
 
       X := 4;
@@ -1290,11 +1295,12 @@ BEGIN
             1: IM := (Buf SHL 8) OR $80000000;
             2: IR := Buf SHL 8;
             3: BEGIN
-                  Ok := (Buf SHR 2) = 0;
+                  Ok := (Buf SHR 3) = 0;
                   IF Ok THEN
                   BEGIN
                      Ex23 := Buf AND 1;
                      Ex22 := (Buf AND 2) SHR 1;
+                     Ex21 := (Buf AND 4);
                   END ELSE
                      IF PopUpError('Out of range',0,Buf,
                                    'Press any key') = '' THEN;
