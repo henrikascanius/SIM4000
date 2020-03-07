@@ -1,5 +1,3 @@
-(*#LEFT 6*)(*#TITLE ""*)
-
 (**********************************************************************)
 (* Unit name      : DESCR.PAS
 (* Pascal Version : Borland Pascal 7.0
@@ -90,7 +88,6 @@ IMPLEMENTATION
 USES
    OpString;
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : Descr386.Init
 (* Function       : 
@@ -102,7 +99,6 @@ BEGIN
    _LoPart := 0;
 END; (* Descr386.Init *)
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : Descr386.Done
 (* Function       : 
@@ -112,7 +108,6 @@ PROCEDURE Descr386.Done;
 BEGIN
 END; (* Done *)
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Func. Name     : Descr386.IsSystemDescr
 (* Function       : 
@@ -123,7 +118,6 @@ BEGIN
    IsSystemDescr := (_HiPart SHR 8) AND $f IN [1,2,3,9,11];
 END; (* Descr386.IsSystemDescr *)
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Func. Name     : Descr386.IsMemDescr
 (* Function       : 
@@ -134,7 +128,6 @@ BEGIN
    IsMemDescr := ((_HiPart SHR 12) AND $1) = 1;
 END; (* Descr386.IsMemDescr *)
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Func. Name     : Descr386.IsGateDescr
 (* Function       : 
@@ -145,7 +138,6 @@ BEGIN
    IsGateDescr := (_HiPart SHR 8) AND $f IN [4,5,6,7,12,14,15];
 END; (* Descr386.IsGateDescr *)
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Func. Name     : Descr386.BaseAddr
 (* Function       : 
@@ -157,7 +149,6 @@ BEGIN
                (_HiPart AND $ff000000);
 END; (* Descr386.BaseAddr *)
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Func. Name     : Descr386.SetBaseAddr
 (* Function       : 
@@ -171,7 +162,6 @@ BEGIN
                (Addr AND $ff000000);
 END; (* Descr386.SetBaseAddr *)
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Func. Name     : Descr386.Limit
 (* Function       : 
@@ -182,7 +172,6 @@ BEGIN
    Limit := (_LoPart AND $ffff) + (_HiPart AND $000f0000);
 END; (* Descr386.Limit *)
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Func. Name     : Descr386.SetLimit
 (* Function       : 
@@ -195,7 +184,6 @@ BEGIN
               (Lim AND $000f0000);
 END; (* Descr386.SetLimit *)
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : MemDescr.Init
 (* Function       : 
@@ -213,7 +201,6 @@ BEGIN
 END; (* MemDescr.Init *)
 
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : SysDescr.Init
 (* Function       : 
@@ -229,7 +216,6 @@ BEGIN
    IF Present  THEN _HiPart := _HiPart + $00008000;
 END; (* SysDescr.Init *)
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : GateDescr.Init
 (* Function       : 
@@ -243,7 +229,6 @@ BEGIN
    _HiPart := _HiPart + DPL SHL 13;
    IF Present  THEN _HiPart := _HiPart + $00008000;
 END; (* GateDescr.Init *)
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Func. Name     : GateDescr.DWCount
 (* Function       : 
@@ -254,7 +239,6 @@ BEGIN
    DWCount := _HiPart AND $1f;
 END; (* GateDescr.DWCount *)
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : GateDescr.SetDWCount
 (* Function       : 
@@ -265,7 +249,6 @@ BEGIN
    _HiPart := (_HiPart AND $FFFFFFE0) + (C AND $1F);
 END; (* GateDescr.SetDWCount *)
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Func. Name     : GateDescr.Selector
 (* Function       : 
@@ -276,7 +259,6 @@ BEGIN
    Selector := (_LoPart SHR 16);
 END; (* GateDescr.Selector *)
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : GateDescr.SetSelector
 (* Function       : 
@@ -287,7 +269,6 @@ BEGIN
    _LoPart := (_LoPart AND $FFFF) + (LONGINT(S) SHL 16);
 END; (* GateDescr.SetSelector *)
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Func. Name     : GateDescr.Offset
 (* Function       : 
@@ -298,7 +279,6 @@ BEGIN
    Offset := (_LoPart AND $FFFF) + (_HiPart AND $FFFF0000);
 END; (* GateDescr.Offset *)
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : GateDescr.SetOffset
 (* Function       : 
@@ -310,7 +290,6 @@ BEGIN
    _HiPart := (_HiPart AND $FFFF) + (O AND $FFFF0000);
 END; (* GateDescr.SetOffset *)
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : Descr386.ShowDescr
 (* Function       : Writes contents of descriptor on CRT. FoOr debugging.
@@ -358,7 +337,6 @@ END; (* ShowDescr *)
 
 
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (*****              UNIT ENTRY AND EXIT PROCEDURES
 (**********************************************************************)
@@ -367,7 +345,6 @@ VAR
 
    ExitSave  : pointer;
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : UnitExit
 (* Function       : Exit procedure.
@@ -381,7 +358,6 @@ END; (* UnitExit *)
 
 
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : UnitEntry
 (* Function       : Entry procedure for unit.

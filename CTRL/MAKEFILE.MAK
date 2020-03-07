@@ -7,8 +7,11 @@ PAS_FILES   =   AUDIO.PAS    \
                 CLOCK.PAS    \
                 CONFIG.PAS   \
                 CONS.PAS     \
+                CX.PAS       \
+                CONVTABS.PAS \
                 DESCR.PAS    \
                 DOSDEV.PAS   \
+                EXPANDER.PAS \
                 FIL.PAS      \
                 INTF.PAS     \
                 INTR.PAS     \

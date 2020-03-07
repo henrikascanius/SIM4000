@@ -1,5 +1,3 @@
-(*#LEFT 6*)(*#TITLE ""*)
-
 (**********************************************************************)
 (* Unit name      : RC851.PAS
 (* Pascal Version : Borland Pascal 7.0
@@ -59,7 +57,6 @@ USES
    Opcmd,
    Opcrt;
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : Rc851Device.Init
 (* Function       : 
@@ -78,7 +75,6 @@ BEGIN
    TState := NORMAL;
 END; (* RC851Device.Init *)
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : Rc851Device.WriteChar
 (* Function       : RC822 emulator.
@@ -232,7 +228,6 @@ BEGIN
 END; (* Rc851Device.WriteChar *)
 
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (*****              UNIT ENTRY AND EXIT PROCEDURES
 (**********************************************************************)
@@ -241,7 +236,6 @@ VAR
 
    ExitSave  : pointer;
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : UnitExit
 (* Function       : Exit procedure.
@@ -255,7 +249,6 @@ END; (* UnitExit *)
 
 
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : UnitEntry
 (* Function       : Entry procedure for unit.

@@ -1,5 +1,3 @@
-(*#LEFT 6*)(*#TITLE ""*)
-
 (**********************************************************************)
 (* Unit name      : LOAD.PAS
 (* Pascal Version : Borland Pascal 7.0
@@ -54,7 +52,6 @@ CONST
    built
 *)
    
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : LoadCodeExt
 (* Function       : Loads the simulator code.
@@ -200,7 +197,6 @@ BEGIN
 
 END; (* LoadCodeExt *)
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : LoadCodeInt
 (* Function       : 
@@ -279,7 +275,6 @@ BEGIN
 
 END; (* LoadCodeInt *)
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : MergeCode
 (* Function       : 
@@ -337,7 +332,6 @@ END; (* MergeCode *)
 
 
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : LoadCode
 (* Function       : 
@@ -374,7 +368,6 @@ END; (* LoadCode *)
 
 
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (*****              UNIT ENTRY AND EXIT PROCEDURES
 (**********************************************************************)
@@ -383,7 +376,6 @@ VAR
 
    ExitSave  : pointer;
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : UnitExit
 (* Function       : Exit procedure.
@@ -397,7 +389,6 @@ END; (* UnitExit *)
 
 
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : UnitEntry
 (* Function       : Entry procedure for unit.

@@ -1,5 +1,3 @@
-(*#LEFT 6*)(*#TITLE ""*)
-
 (**********************************************************************)
 (* Unit name      : READER.PAS
 (* Pascal Version : Borland Pascal 7.0
@@ -187,7 +185,6 @@ BEGIN
 END; (* InitEntryScreen *)
    
    
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : ReaderDevice.Init
 (* Function       : 
@@ -207,7 +204,6 @@ BEGIN
 
 END; (* ReaderDevice.Init *)
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : ReaderDevice.Done
 (* Function       : 
@@ -220,7 +216,6 @@ BEGIN
    INHERITED Done;
 END; (* ReaderDevice.Done *)
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : ReaderDevice.Sense
 (* Function       : 
@@ -238,7 +233,6 @@ BEGIN
    END;
 END; (* ReaderDevice.Sense *)
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : ReaderDevice.Rd
 (* Function       : 
@@ -313,7 +307,6 @@ BEGIN
 
 END; (* ReaderDevice.Rd *)
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : ReaderDevice.AutoloadWord
 (* Function       : 
@@ -351,7 +344,6 @@ BEGIN
    END;
 END; (* ReaderDevice.AutoloadWord *)
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Func. Name     : ReaderDevice.DeviceID
 (* Function       : 
@@ -363,7 +355,6 @@ BEGIN
 END; (* ReaderDevice.DeviceID *)
 
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : ReaderDevice.MountTape
 (* Function       : 
@@ -385,7 +376,6 @@ BEGIN
    BufLast := 0;
 END; (* ReaderDevice.MountTape *)
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : ReaderDevice.Configure
 (* Function       : 
@@ -403,7 +393,6 @@ BEGIN
 END; (* ReaderDevice.Configure *)
 
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (*****              UNIT ENTRY AND EXIT PROCEDURES
 (**********************************************************************)
@@ -411,7 +400,6 @@ END; (* ReaderDevice.Configure *)
 VAR
    ExitSave  : pointer;
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : UnitExit
 (* Function       : Exit procedure.
@@ -423,7 +411,6 @@ BEGIN
 END; (* UnitExit *)
 
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : UnitEntry
 (* Function       : Entry procedure for unit.

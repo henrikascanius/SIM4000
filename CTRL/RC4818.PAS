@@ -1,5 +1,3 @@
-(*#LEFT 6*)(*#TITLE ""*)
-
 (**********************************************************************)
 (* Unit name      : RC4818.PAS
 (* Pascal Version : Borland Pascal 7.0
@@ -188,7 +186,6 @@ CONST
    LogOpen: BOOLEAN = FALSE;
 {$ENDIF}
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : RC4819.Init
 (* Function       : 
@@ -242,7 +239,6 @@ BEGIN
    END;
 END; (* RC4819.Init *)
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : RC4819.Done
 (* Function       : 
@@ -253,7 +249,6 @@ BEGIN
    Close(DosFile);
 END; (* RC4819.Done *)
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : RC4819.TransferFirst
 (* Function       : 
@@ -269,7 +264,6 @@ BEGIN
    IF CurrSec  > MaxSec  THEN CurrSec  := MaxSec;
 END; (* RC4819.TransferFirst *)
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : RC4819.TransferSize
 (* Function       : 
@@ -280,7 +274,6 @@ BEGIN
    CurrSize := (WReg SHR 8) AND 4095;
 END; (* RC4819.TransferSize *)
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : RC4819.InputData
 (* Function       : 
@@ -363,7 +356,6 @@ BEGIN
 
 END; (* RC4819.InputData *)
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : RC4819.OutputData
 (* Function       : 
@@ -450,7 +442,6 @@ BEGIN
 
 END; (* RC4819.OutputData *)
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : RC4819.InputAddress
 (* Function       : 
@@ -474,7 +465,6 @@ BEGIN
    DataInterrupt(0,0);
 END; (* RC4819.InputAddress *)
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : RC4819.OutputAddress
 (* Function       : 
@@ -486,7 +476,6 @@ BEGIN
    DataInterrupt(0,0);
 END; (* RC4819.OutputAddress *)
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : RC4819.ReturnToZero
 (* Function       : 
@@ -499,7 +488,6 @@ BEGIN
    HeadInterrupt(0,0);
 END; (* RC4819.ReturnToZero *)
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : RC4819.TransferForward
 (* Function       : 
@@ -521,7 +509,6 @@ BEGIN
    END;
 END; (* RC4819.TransferForward *)
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : RC4819.TransferReverse
 (* Function       : 
@@ -543,7 +530,6 @@ BEGIN
    END;
 END; (* RC4819.TransferReverse *)
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : RC4819.SetStatusBits
 (* Function       : 
@@ -560,7 +546,6 @@ BEGIN
    END;
 END; (* RC4819.SetStatusBits *)
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : RC4819.ClearStatusBits
 (* Function       : 
@@ -577,7 +562,6 @@ BEGIN
    END;
 END; (* RC4819.ClearStatusBits *)
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : RC4819.LoadCSA
 (* Function       : "Load Core Store Address", clears various status
@@ -590,7 +574,6 @@ BEGIN
                    WRONG_2ND_INDEX_32 + ADDRESS_ERROR_32 + DROP_OUT_32);
 END; (* RC4819.LoadCSA *)
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : RC4819.HeadInterrupt
 (* Function       : 
@@ -602,7 +585,6 @@ BEGIN
    DFC^.HeadInterrupt;
 END; (* RC4819.HeadInterrupt *)
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : RC4819.DataInterrupt
 (* Function       : 
@@ -615,7 +597,6 @@ BEGIN
 END; (* RC4819.DataInterrupt *)
 
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Func. Name     : RC4819.Expand
 (* Function       : Expands the dos file to cyl cylinders
@@ -668,7 +649,6 @@ BEGIN
 
 END; (* RC4819.Expand *)
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : DFC403Device.Init
 (* Function       : 
@@ -696,7 +676,6 @@ BEGIN
 
 END; (* DFC403Device.Init *)
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : DFC403Device.Done
 (* Function       : 
@@ -714,7 +693,6 @@ BEGIN
 END; (* DFC403Device.Done *)
 
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : RC4819Ram.Init
 (* Function       : 
@@ -745,7 +723,6 @@ BEGIN
 
 END; (* RC4819Ram.Init *)
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : RC4819Ram.Done
 (* Function       : 
@@ -758,7 +735,6 @@ END; (* RC4819Ram.Done *)
 
 
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : RC4819Ram.InputData
 (* Function       : 
@@ -837,7 +813,6 @@ BEGIN
 END; (* RC4819Ram.InputData *)
 
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : RC4819Ram.OutputData
 (* Function       : 
@@ -916,7 +891,6 @@ BEGIN
 END; (* RC4819Ram.OutputData *)
 
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Func. Name     : DFC403Device.IncludeDrive
 (* Function       : 
@@ -932,7 +906,6 @@ BEGIN
 END; (* DFC403Device.IncludeDrive *)
 
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : DFC403Device.Sense
 (* Function       : 
@@ -1006,7 +979,6 @@ BEGIN
    END;
 END; (* DFC403Device.Sense *)
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : DFC403Device.Control
 (* Function       : 
@@ -1088,7 +1060,6 @@ BEGIN
    END;
 END; (* DFC403Device.Control *)
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Func. Name     : DFC403Device.DeviceID
 (* Function       : 
@@ -1099,7 +1070,6 @@ BEGIN
    DeviceID := 'DISC';
 END; (* DFC403Device.DeviceID *)
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : DFC403Device.HeadInterrupt
 (* Function       : 
@@ -1122,7 +1092,6 @@ BEGIN
 {$ENDIF}
 END; (* DFC403Device.HeadInterrupt *)
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : DFC403Device.DataInterrupt
 (* Function       : 
@@ -1147,7 +1116,6 @@ END; (* DFC403Device.DataInterrupt *)
 
 
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (*****              UNIT ENTRY AND EXIT PROCEDURES
 (**********************************************************************)
@@ -1156,7 +1124,6 @@ VAR
 
    ExitSave  : pointer;
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : UnitExit
 (* Function       : Exit procedure.
@@ -1171,7 +1138,6 @@ BEGIN
 END; (* UnitExit *)
 
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : UnitEntry
 (* Function       : Entry procedure for unit.

@@ -1,5 +1,3 @@
-(*#LEFT 6*)(*#TITLE ""*)
-
 (**********************************************************************)
 (* Unit name      : UTIL.PAS
 (* Pascal Version : Borland Pascal 7.0
@@ -38,7 +36,6 @@ INLINE ($9D);
 IMPLEMENTATION
 USES OpCrt;
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : FatalError
 (* Function       : 
@@ -51,7 +48,6 @@ BEGIN
    Halt(1);
 END; (* FatalError *)
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : WaitKey
 (* Function       : 
@@ -66,7 +62,6 @@ END; (* WaitKey *)
 
 
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (*****              UNIT ENTRY AND EXIT PROCEDURES
 (**********************************************************************)
@@ -75,7 +70,6 @@ VAR
 
    ExitSave  : pointer;
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : UnitExit
 (* Function       : Exit procedure.
@@ -89,7 +83,6 @@ END; (* UnitExit *)
 
 
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : UnitEntry
 (* Function       : Entry procedure for unit.

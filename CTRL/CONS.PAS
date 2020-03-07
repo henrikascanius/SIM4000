@@ -1,5 +1,3 @@
-(*#LEFT 6*)(*#TITLE ""*)
-
 (**********************************************************************)
 (* Unit name      : CONS.PAS
 (* Pascal Version : Borland Pascal 7.0
@@ -13,7 +11,7 @@
 (* Functional description :
 (* ------------------------
 (*  Console device simulator
-(*
+(* 96-09-28 21:02 HJ "RC8000-like" version
 (**********************************************************************)
 
 {$F+}
@@ -26,10 +24,30 @@ INTERFACE
 
 USES
    Io,
+   Intr,
+   Expander,
+   ConvTabs,
    Scrn;
 
+TYPE
+   Multiport4ID = (HIGH_ADDR,LOW_ADDR);
+
+
 CONST
-   KeyBufSize     =  32;
+   KeyBufSize     =  102;
+
+   (* Hardware handshake lines *)
+   CTS            = $10;
+   DSR            = $20;
+   DCD            = $80;
+
+   Multiport4AddrMap: ARRAY [Multiport4ID,1..4] OF WORD =
+      (($2A0,$2A8,$2B0,$2B8),    (* HIGH_ADDR *)
+       ($1A0,$1A8,$1B0,$1B8));   (* LOW_ADDR  *)
+
+   Multiport4VectorMap: ARRAY[Multiport4ID] OF WORD =
+      ($2BF,$1BF);
+
 
 TYPE
 
@@ -49,8 +67,19 @@ TYPE
                            FUNCTION    IsFull:   BOOLEAN;
                            PROCEDURE   InsKey(K: WORD);
                            FUNCTION    GetKey:   WORD;
+                           PROCEDURE   RemoveLast;
                            PROCEDURE   Flush;
                      END;
+
+   (* ComDisconnectTimer is used to time the toggling of DTR
+      caused by disconnect request *)
+
+   ComDisconnectTimerP = ^ComDisconnectTimer;
+
+   ComDisconnectTimer = OBJECT (IoTimer)
+                           PROCEDURE TimeoutAction; VIRTUAL;
+                        END;
+                           
 
 
    (* ABSTRACT CONSOLE DEVICE: *)
@@ -61,19 +90,42 @@ TYPE
                         _OprInt,
                         _IoInt:  BYTE;
 
+                        _OprIntBit,
+                        _IoIntBit: LONGINT;
+
+                        _OprIntExpander,
+                        _IoIntExpander:InterruptExpanderPtr;
+
+                        _ExpanderBit: LONGINT;     (* Id bit in expanders *)
+
                         _TimeoutVal: WORD;
 
-                        _Busy:   BOOLEAN;
-                        _Status: LONGINT;
+                        _WrIntrPending,             (* only ComDevice *)
+                        _InpBusy:     BOOLEAN;
+                        _Status:      LONGINT;
+                        _InKey:       BYTE;
+                        _RdModif:     BYTE;
                         _EchoOnSense: BOOLEAN;
+                        _InpEnabled:  BOOLEAN;
+                        _Prompt:      CHAR;
+                        _InpConvTabNo: BYTE;
+                        _InpConvTab:  InpConvTableP;
 
                         KeybQ:  KeyboardQueue;
+                        DisconectTimer: ComDisconnectTimer;
 
                         CONSTRUCTOR Init(DevNo: WORD;
                                          IoInt,OprInt: BYTE);
                         DESTRUCTOR Done;                  VIRTUAL;
 
-                        PROCEDURE  WriteChar(C: CHAR); VIRTUAL;
+                        PROCEDURE  MakeIoInt;
+                        PROCEDURE  MakeOprInt;
+
+                        FUNCTION   Disconnected: BOOLEAN; VIRTUAL;
+                        PROCEDURE  WriteChar(C: CHAR);    VIRTUAL;
+                        PROCEDURE  SetAttributes;         VIRTUAL;
+                        PROCEDURE  GetAttributes;         VIRTUAL;
+                        PROCEDURE  DisconnectRequest;     VIRTUAL;
 
                         PROCEDURE  Sense(Modif: BYTE);    VIRTUAL;
                         PROCEDURE  Control(Modif: BYTE);  VIRTUAL;
@@ -82,6 +134,9 @@ TYPE
 
                         PROCEDURE  KeyAvail (Key: WORD);  VIRTUAL;
                         PROCEDURE  TimeoutAction;         VIRTUAL;
+                        PROCEDURE  DisconnectTimeoutAction;VIRTUAL;
+
+                        PROCEDURE  HandleInputConversion; VIRTUAL;
 
                      END;
 
@@ -102,6 +157,7 @@ TYPE
                                          ConsNo, IoInt,OprInt: BYTE);
                         DESTRUCTOR Done;                  VIRTUAL;
 
+                        FUNCTION   Disconnected: BOOLEAN; VIRTUAL;
                         PROCEDURE  WriteChar(C: CHAR); VIRTUAL;
 
                         PROCEDURE  Wr(Modif: BYTE);       VIRTUAL;
@@ -110,12 +166,13 @@ TYPE
 
                         FUNCTION   InForeground: BOOLEAN;
                         PROCEDURE  KeyAvail (Key: WORD); VIRTUAL;
+                        PROCEDURE  TimeoutAction;         VIRTUAL;
                         PROCEDURE  IntrAction(VAR Param); VIRTUAL;
 
                      END;
 
 
-   (* CONSOLE ON COM PORT: *)
+   (* TERMINAL ON COM PORT: *)
    
    ComDevicePtr   =  ^ComDevice;
 
@@ -125,25 +182,38 @@ TYPE
                         _IRQ       : BYTE;
 
                         _TxActive,
-                        _WrIntrPending,
                         _InService : BOOLEAN;
 
                         _IoBase    : WORD;
 
-                        TxQueue   : KeyboardQueue;
+                        _ConnectLine,
+                        _ReadyLine : BYTE;  (* use DSR/CTS/DCD for connect/handshake *)
+
+                        _LSRMirror,
+                        _MSRMirror,
+                        _IERMirror : BYTE;
+
+                        _TxHold    : BOOLEAN;
+
+                        TxQueue    : KeyboardQueue;
 
                         CONSTRUCTOR Init(DevNo: WORD;
                                          IoBase: WORD;
-                                         IRQ,IoInt,OprInt: BYTE);
+                                         IRQ,IoInt,OprInt: BYTE;
+                                         ConnectLine,ReadyLine: BYTE);
                         DESTRUCTOR Done;                  VIRTUAL;
 
+                        FUNCTION   Disconnected: BOOLEAN; VIRTUAL;
                         PROCEDURE  WriteChar(C: CHAR);    VIRTUAL;
+                        PROCEDURE  DisconnectRequest;     VIRTUAL;
 
                         PROCEDURE  Wr(Modif: BYTE);       VIRTUAL;
 
                         FUNCTION   DeviceID: STRING;      VIRTUAL;
 
                         PROCEDURE  KeyAvail (Key: WORD);  VIRTUAL;
+                        PROCEDURE  TimeoutAction;         VIRTUAL;
+                        PROCEDURE  DisconnectTimeoutAction;VIRTUAL;
                         PROCEDURE  IntrAction(VAR Param); VIRTUAL;
 
                         PROCEDURE  MakeLineSettings(Divisor: WORD; 
@@ -152,7 +222,33 @@ TYPE
                                                     StopBits: CHAR);
                      END;
 
-(*#PAGE*)
+
+
+   (* HANDLER FOR MULTIPORT SERIAL CARD: *)
+
+   Multiport4HandlerPtr = ^Multiport4Handler;
+
+   Multiport4Handler= OBJECT (IntrHandler)
+                        _Id         : Multiport4ID;
+                        _IntHandle,
+                        _ISRMask,
+                        _IRQ        : BYTE;
+                        _PortUsed   : ARRAY[1..4] OF BOOLEAN;
+
+                        CONSTRUCTOR Init(Id: Multiport4ID; IRQ: BYTE);
+                        DESTRUCTOR  Done;               VIRTUAL;
+                        PROCEDURE   InsHook(VAR Hook: ComDevice);
+                        FUNCTION    PortUsed (Port: BYTE): BOOLEAN;
+                        PROCEDURE   DoHooks(VAR Param);  VIRTUAL;
+                     END;
+
+
+PROCEDURE ConsPostInit;
+
+VAR
+   MultiPort4Handlers: ARRAY[Multiport4ID] OF Multiport4HandlerPtr;
+
+
 IMPLEMENTATION
 
 USES
@@ -160,14 +256,44 @@ USES
    OpInt,
    OpRoot,
    Util,
-   Intr,
    Intf;
 
 CONST
+   (* Statusword: *)
+
+   INTERVENTION = LONGINT(1) SHL 23;
+   PARITY_ERROR = LONGINT(1) SHL 22;
+   TIMEOUT      = LONGINT(1) SHL 21;
+   TERMINATE    = LONGINT(1) SHL 20;  (* Simulator specific *)
+   BLIND_CHAR   = LONGINT(1) SHL 19;  (* Simulator specific *)
+   BACKSPACE    = LONGINT(1) SHL 18;  (* Simulator specific *)
+   CANCEL       = LONGINT(1) SHL 17;  (* Simulator specific *)
+   ATTENTION    = LONGINT(1) SHL 16;  (* Simulator specific *)
+
+
+   (* Read modifier bits (all are simulator specific): *)
+
+   BLIND_MODE   = 1;
+   NO_BS_ECHO   = 2;
+
+
+   (* Write modifier values (all are simulator specific): *)
+
+   WRITE_PROMPT = 1;
+
+
+   (* Control modifier values (all are simulator specific): *)
+
+   SET_ATTR     = 0;
+   GET_ATTR     = 1;
+   DISCONN_REQ  = 15;
+
+
+
    DATE_HOTKEY  = $2000;  (* Alt-D *)
    PRINT_HOTKEY = $1900;  (* Alt-P *)
 
-   (*  addr. of 8250 regs: *)
+   (*  addr. of 82x50 regs: *)
 
    UARTthr   =     0;
    UARTrbr   =     0;
@@ -178,6 +304,14 @@ CONST
    UARTlsr   =     5;
    UARTmsr   =     6;
 
+
+   (* UseComTxBuffer = TRUE -> Write operations are buffered in
+      the TxQueue 32-byte buffer. This causes status reporting
+      (disconnected/timeout) to be inaccurate. When FALSE, TxQueue
+      is still needed to e.g. buffer input echo.
+      TRUE is not tested!
+   *)
+   UseComTxBuffer: BOOLEAN = FALSE;
 
 
 TYPE
@@ -190,11 +324,8 @@ TYPE
 
 VAR
    ComIntrHndlr: ComIntrHandler;   (* Common for all COM devices *)
-{$IFDEF CONSDUMP}
-   DF: TEXT;
-{$ENDIF}
 
-(*#CPAGE 20*)
+
 (**********************************************************************)
 (* Proc. Name     : KeyboardQueue.Init
 (* Function       : 
@@ -206,7 +337,6 @@ BEGIN
    _Tail := 0;
 END; (* KeyboardQueue.Init *)
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Func. Name     : KeyboardQueue.IsEmpty
 (* Function       : 
@@ -217,7 +347,6 @@ BEGIN
    IsEmpty := _Head = _Tail;
 END; (* KeyboardQueue.IsEmpty *)
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Func. Name     : KeyboardQueue.IsFull
 (* Function       : 
@@ -232,7 +361,6 @@ BEGIN
    IsFull := _Head = T;
 END; (* KeyboardQueue.IsFull *)
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : KeyboardQueue.InsKey
 (* Function       : 
@@ -244,12 +372,12 @@ VAR
 BEGIN
    T := _Tail + 1;
    IF T >= KeyBufSize THEN T := 0;
-   IF T = _Head THEN Exit;  (* Buffer full *)
+   IF T = _Head THEN 
+      Exit;  (* Buffer full *)
    _Buf[T] := K;
    _Tail := T;
 END; (* KeyboardQueue.InsKey *)
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Func. Name     : KeyboardQueue.GetKey
 (* Function       : 
@@ -264,7 +392,22 @@ BEGIN
       GetKey := _Buf[_Head];
    END;
 END; (* KeyboardQueue.GetKey *)
-(*#CPAGE 20*)
+
+
+(**********************************************************************)
+(* Proc. Name     : KeyboardQueue.RemoveLast
+(* Function       : Remove youngest element from queue
+(**********************************************************************)
+PROCEDURE KeyboardQueue.RemoveLast;
+
+BEGIN
+   IF _Head <> _Tail THEN
+   BEGIN
+      IF _Tail = 0 THEN _Tail := KeyBufSize-1 ELSE Dec(_Tail);
+   END;
+END; (* KeyboardQueue.RemoveLast *)
+
+
 (**********************************************************************)
 (* Proc. Name     : KeyboardQueue.Flush
 (* Function       : 
@@ -275,7 +418,16 @@ BEGIN
    _Head := _Tail;
 END; (* KeyboardQueue.Flush *)
 
-(*#CPAGE 20*)
+(**********************************************************************)
+(* Proc. Name     : ComDisconnectTimer.IntrAction
+(* Function       : 
+(**********************************************************************)
+PROCEDURE ComDisconnectTimer.TimeoutAction;
+
+BEGIN
+   GenericConsDevicePtr(_Owner)^.DisconnectTimeoutAction;
+END; (* ComDisconnectTimer.IntrAction *)
+
 (**********************************************************************)
 (* Proc. Name     : GenericConsDevice.Init
 (* Function       : 
@@ -286,15 +438,36 @@ CONSTRUCTOR GenericConsDevice.Init (DevNo: WORD;
 BEGIN
    INHERITED Init(DevNo);
    KeybQ.Init;
-   _IoInt := IoInt;
-   _OprInt := OprInt;
-   _Busy := FALSE;
+   DisconectTimer.Init(Self);
+
+   IF IoInt > 63 THEN
+   BEGIN  (* Device on TMX, Intno = 64 + <devno of interrupt expander> *)
+      _OprIntExpander := InterruptExpanderPtr(IOMap[OprInt AND 63]);
+      _OprInt := _OprIntExpander^.IntNumber;
+      _IoIntExpander  := InterruptExpanderPtr(IOMap[IoInt AND 63]);
+      _IoInt := _IoIntExpander^.IntNumber;
+      _ExpanderBit := LONGINT(1) SHL (32-(DevNo-(OprInt AND 63)));
+   END ELSE
+   BEGIN
+      _IoInt := IoInt;
+      _OprInt := OprInt;
+      _OprIntExpander := NIL;
+      _IoIntExpander := NIL;
+      _ExpanderBit := 0;
+   END;
+
+   _OprIntBit := LONGINT(1) SHL (31-_OprInt);
+   _IoIntBit := LONGINT(1) SHL (31-_IoInt);
+   _WrIntrPending := FALSE;
+   _InpBusy := FALSE;
    _TimeoutVal := 1;
    _EchoOnSense := FALSE;
-
+   _InpEnabled := FALSE;
+   _Prompt := #7;
+   _InpConvTabNo := 1;
+   _InpConvTab := InpConvTables[_InpConvTabNo];
 END; (* GenericConsDevice.Init *)
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : GenericConsDevice.Done
 (* Function       : 
@@ -304,7 +477,38 @@ DESTRUCTOR GenericConsDevice.Done;
 BEGIN
 END; (* GenericConsDevice.Done *)
 
-(*#CPAGE 20*)
+
+(**********************************************************************)
+(* Proc. Name     : GenericConsDevice.MakeIoInt
+(* Function       : 
+(**********************************************************************)
+PROCEDURE GenericConsDevice.MakeIoInt;
+
+BEGIN
+   IF _ExpanderBit <> 0 THEN
+   WITH _IoIntExpander^ DO 
+      Register := Register OR _ExpanderBit;
+   WITH State8000 DO
+      IR := IR OR _IoIntBit;
+END; (* GenericConsDevice.MakeIoInt *)
+
+
+(**********************************************************************)
+(* Proc. Name     : GenericConsDevice.MakeOprInt
+(* Function       : 
+(**********************************************************************)
+PROCEDURE GenericConsDevice.MakeOprInt;
+
+BEGIN
+   IF _ExpanderBit <> 0 THEN
+   WITH _OprIntExpander^ DO 
+      Register := Register OR _ExpanderBit;
+   WITH State8000 DO
+      IR := IR OR _OprIntBit;
+END; (* GenericConsDevice.MakeOprInt *)
+
+
+
 (**********************************************************************)
 (* Proc. Name     : ConsDevice.Done
 (* Function       : 
@@ -318,40 +522,49 @@ BEGIN
    (* Should release interrupts here *)
 END; (* ConsDevice.Done *)
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : GenericConsDevice.Sense
 (* Function       : 
 (**********************************************************************)
 PROCEDURE GenericConsDevice.Sense (Modif: BYTE);
 
+VAR
+   I: BYTE;
+
 BEGIN
    WITH State8000 DO
    BEGIN
-      Ex22 := 0;
-      Ex23 := Ord(_Busy);
-      IF NOT _Busy THEN
+      Ex22 := Ord(Disconnected);
+      Ex23 := Ord(_InpBusy);
+      IF BOOLEAN(Ex22 OR Ex23) THEN Exit;
+
+      SrvcParam.Wreg := _Status SHL 8;
+      IF _EchoOnSense THEN
       BEGIN
-         SrvcParam.Wreg := _Status SHL 8;
-         IF _EchoOnSense AND (_Status <> 27) THEN WriteChar(Chr(_Status));
-         _EchoOnSense := FALSE;
+         IF BYTE(_Status) > 31 THEN WriteChar(Chr(_Status)) ELSE
+         WITH _InpConvTab^[BYTE(_InKey)] DO
+         BEGIN
+            FOR I := 1 TO Ord(Echo[0]) DO WriteChar(Echo[I]);
+         END;
       END;
+      _EchoOnSense := FALSE;
    END;
 END; (* GenericConsDevice.Sense *)
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : GenericConsDevice.Control
-(* Function       : Causes an interrupt, as defined in the device manual.
+(* Function       : 
 (**********************************************************************)
 PROCEDURE GenericConsDevice.Control (Modif: BYTE);
 
 BEGIN
-   WITH State8000 DO
-      IR := IR OR (LONGINT(1) SHL (31-_IoInt));
+   CASE Modif OF
+      SET_ATTR:    SetAttributes;
+      GET_ATTR:    GetAttributes;
+      DISCONN_REQ: DisconnectRequest;
+   END;
 END; (* GenericConsDevice.Control *)
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : GenericConsDevice.Rd
 (* Function       : 
@@ -361,20 +574,37 @@ PROCEDURE GenericConsDevice.Rd (Modif: BYTE);
 BEGIN
    WITH State8000 DO
    BEGIN
-      Ex22 := 0;
-      Ex23 := Ord(_Busy);
+      Ex22 := Ord(Disconnected);
+      Ex23 := Ord(_InpBusy);
+      IF BOOLEAN(Ex22 OR Ex23) THEN Exit;
    END;
-   IF _Busy THEN Exit;
+
+   _RdModif := Modif;
+   _InpEnabled := TRUE;
+
+   PushF;
+   InterruptsOff;
 
    WITH KeybQ DO
    IF IsEmpty THEN
    BEGIN
-      _Busy := TRUE;
+      _InpBusy := TRUE;
       Timer.SetTimeout(_TimeoutVal,SEC);
    END ELSE KeyAvail(GetKey);
+   PopF;
 END; (* GenericConsDevice.Rd *)
 
-(*#CPAGE 20*)
+
+(**********************************************************************)
+(* Func. Name     : GenericConsDevice.Disconnected
+(* Function       : 
+(**********************************************************************)
+FUNCTION GenericConsDevice.Disconnected: BOOLEAN;
+
+BEGIN
+{  Abstract;}   
+END; (* GenericConsDevice.Disconnected *)
+
 (**********************************************************************)
 (* Proc. Name     : GenericConsDevice.WriteChar
 (* Function       : Writes a character to screen. (Can be overridden)
@@ -385,7 +615,6 @@ BEGIN
 {  Abstract;}
 END; (* GenericConsDevice.WriteChar *)
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : GenericConsDevice.Wr
 (* Function       : 
@@ -396,23 +625,16 @@ BEGIN
 {  Abstract;}   
 END; (* GenericConsDevice.Wr *)
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : GenericConsDevice.KeyAvail
 (* Function       : Called when a keystroke is available for RC8000
 (**********************************************************************)
 PROCEDURE GenericConsDevice.KeyAvail (Key: WORD);
 
-VAR
-   S,Sx: STRING[20];
-   N,
-   B: BYTE;
-
 BEGIN
 {  Abstract;}
 END; (* GenericConsDevice.KeyAvail *)
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : GenericConsDevice.TimeoutAction
 (* Function       : 
@@ -420,18 +642,117 @@ END; (* GenericConsDevice.KeyAvail *)
 PROCEDURE GenericConsDevice.TimeoutAction;
 
 BEGIN
-   PushF;
-   InterruptsOff;
-   IF _Busy THEN
-   BEGIN
-      _Busy := FALSE;
-      _Status := $00200000; (* Status = timeout *)
-      WITH State8000 DO IR := IR OR (LONGINT(1) SHL (31-_IoInt));
-   END;
-   PopF;
+   {Abstract;}   
 END; (* GenericConsDevice.TimeoutAction *)
 
-(*#CPAGE 20*)
+(**********************************************************************)
+(* Proc. Name     : GenericConsDevice.DisconnectTimeoutAction
+(* Function       : 
+(**********************************************************************)
+PROCEDURE GenericConsDevice.DisconnectTimeoutAction;
+
+BEGIN
+   { Do nothing }   
+END; (* GenericConsDevice.DisconnectTimeoutAction *)
+
+(**********************************************************************)
+(* Proc. Name     : GenericConsDevice.SetAttributes
+(* Function       : Only handle "type" and "prompt" attributes
+(**********************************************************************)
+PROCEDURE GenericConsDevice.SetAttributes;
+
+VAR
+  Msg: ARRAY [1..8] OF LONGINT;
+  Typ: WORD;
+
+BEGIN
+   WITH State8000 DO
+   BEGIN
+      Ex22 := 0;  (* Allow operation even if disconnected *)
+      Ex23 := Ord(_InpBusy);
+
+      IF NOT _InpBusy THEN
+      BEGIN
+         FromCore(State8000.SrvcParam.Wreg SHR 8,8,@Msg);
+         Typ := (Msg[2] SHR 8) AND $3FF;
+         IF  Typ <= MAXINPTABLENO THEN
+         BEGIN
+            _InpConvTabNo := Typ;
+            _InpConvTab   := InpConvTables[Typ];
+         END ELSE Ex23 := 1;
+
+         IF Ex23 = 0 THEN _Prompt := Chr(Msg[4] SHR 16);
+      END;
+   END;
+END; (* GenericConsDevice.SetAttributes *)
+
+(**********************************************************************)
+(* Proc. Name     : GenericConsDevice.GetAttributes
+(* Function       : Only handle "type" and "prompt" attributes
+(**********************************************************************)
+PROCEDURE GenericConsDevice.GetAttributes;
+
+VAR
+   Answ: ARRAY [1..8] OF LONGINT;
+   I: WORD;
+
+BEGIN
+   WITH State8000 DO
+   BEGIN
+      Ex22 := 0;  (* Allow operation even if disconnected *)
+      Ex23 := Ord(_InpBusy);
+
+      IF NOT _InpBusy THEN
+      BEGIN
+         FOR I := 1 TO 8 DO Answ[I] := 0;
+         Answ[2] := (_InpConvTabNo SHL 8) + (1 SHL 19);  (* echo.yes *)
+         Answ[4] := LONGINT(Ord(_Prompt)) SHL 16;
+         ToCore(State8000.SrvcParam.Wreg SHR 8,8,@Answ);
+      END;
+   END;
+END; (* GenericConsDevice.GetAttributes *)
+
+
+(**********************************************************************)
+(* Proc. Name     : GenericConsDevice.DisconnectRequest
+(* Function       : 
+(**********************************************************************)
+PROCEDURE GenericConsDevice.DisconnectRequest;
+
+BEGIN
+   { Do nothing }
+END; (* GenericConsDevice.DisconnectRequest *)
+
+
+(**********************************************************************)
+(* Proc. Name     : GenericConsDevice.HandleInputConversion
+(* Function       : 
+(**********************************************************************)
+PROCEDURE GenericConsDevice.HandleInputConversion;
+
+BEGIN
+   IF (_Status AND BLIND_CHAR) = 0 THEN
+   BEGIN
+      IF (_Status > 31) THEN _EchoOnSense := ((_RdModif AND BLIND_MODE) = 0) ELSE
+      WITH _InpConvTab^[BYTE(_Status)] DO
+      BEGIN
+         IF ((NOT (BS_CHAR IN Attr) OR ((_RdModif AND NO_BS_ECHO) = 0))) AND
+            ((_RdModif AND BLIND_MODE) = 0) THEN
+            _EchoOnSense := Echo[0] > #0;
+         _Status := ChVal;
+         IF ATTENTION_CHAR IN Attr THEN _Status := _Status OR ATTENTION;
+         IF BS_CHAR IN Attr THEN _Status := _Status OR BACKSPACE;
+         IF CAN_CHAR IN Attr THEN _Status := _Status OR CANCEL;
+         IF TERMINATING IN Attr THEN
+         BEGIN
+            _Status := _Status OR TERMINATE;
+            _InpEnabled := FALSE;
+         END;
+      END;
+   END;
+END; (* GenericConsDevice.HandleInputConversion *)
+
+
 (**********************************************************************)
 (* Proc. Name     : ConsDevice.Init
 (* Function       : 
@@ -486,7 +807,17 @@ Inline(
 
 
 
-(*#CPAGE 20*)
+(**********************************************************************)
+(* Func. Name     : ConsDevice.Disconnected
+(* Function       : 
+(**********************************************************************)
+FUNCTION ConsDevice.Disconnected: BOOLEAN;
+
+BEGIN
+   Disconnected := FALSE;  (* Local console cannot be disconnected *)
+END; (* ConsDevice.Disconnected *)
+
+
 (**********************************************************************)
 (* Proc. Name     : ConsDevice.WriteChar
 (* Function       : Writes a character to screen. (Can be overridden)
@@ -495,11 +826,6 @@ PROCEDURE ConsDevice.WriteChar (C: CHAR);
 
 BEGIN
    Scrn.OutChar(C);
-
-{$IFDEF CONSDUMP}
-   IF (_DevNo=2) AND ((C > #31) OR (C = #10)) AND (C<>#127) THEN Write(DF,C);
-{$ENDIF}
-
    IF _PrintFlag AND (C<>#127) THEN
    BEGIN
       WHILE NOT LptReady(GetLptStatus(0)) DO;
@@ -507,8 +833,6 @@ BEGIN
    END;
 END; (* ConsDevice.WriteChar *)
 
-
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : ConsDevice.Wr
 (* Function       : 
@@ -516,20 +840,23 @@ END; (* ConsDevice.WriteChar *)
 PROCEDURE ConsDevice.Wr (Modif: BYTE);
 
 BEGIN
+   IF _InpBusy THEN Timer.CancelTimeout;
+   _InpEnabled := FALSE;
+   _InpBusy := FALSE;
    InterruptsOn;
-   _Status := (State8000.SrvcParam.Wreg SHR 8) AND $7F;
-   WriteChar(Chr(_Status));
+
+   IF Modif = WRITE_PROMPT
+      THEN _Status := Ord(_Prompt)
+      ELSE _Status := (State8000.SrvcParam.Wreg SHR 8) AND $7F;
+   IF _Status<>0 THEN WriteChar(Chr(_Status));
    WITH State8000 DO
    BEGIN
-      IR := IR OR (LONGINT(1) SHL (31-_IoInt));
+      MakeIoInt;
       Ex22 := 0;
       Ex23 := 0;
    END;
-   IF _Busy THEN Timer.CancelTimeout;
-   _Busy := FALSE;
 END; (* ConsDevice.Wr *)
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Func. Name     : ConsDevice.DeviceID
 (* Function       : 
@@ -542,7 +869,6 @@ END; (* ConsDevice.DeviceID *)
 
 
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Func. Name     : ConsDevice.InForeground
 (* Function       : 
@@ -553,7 +879,6 @@ BEGIN
    InForeground := Scrn.OnPhysScreen;
 END; (* ConsDevice.InForeground *)
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : ConsDevice.KeyAvail
 (* Function       : Called when a keystroke is available for RC8000
@@ -590,12 +915,46 @@ BEGIN
       Key := Ord(S[1]);
       PopF;
    END;
-   _Status := Ord(Pc2Rc[Key AND $FF]);
-   _EchoOnSense := TRUE;   (* DONT echo here, this is part of an interrupt routine *)
-   WITH State8000 DO IR := IR OR (LONGINT(1) SHL (31-_IoInt));
+
+   IF BYTE(Key) = 0
+      THEN _Status := CompKeyTable[Key SHR 8] ELSE
+   BEGIN
+      _Status := Ord(Pc2Rc[BYTE(Key)]);
+      IF (BYTE(Key) > 127) AND (_Status = 32) THEN
+         _Status := CompKeyTable[Key SHR 8];  (* Magic! *)
+   END;
+
+   IF _Status = 0 THEN  _Status := BLIND_CHAR;
+
+   IF _Status = 127 THEN _Status := 0;
+   _InKey := _Status;  (* Save for echo *)
+   HandleInputConversion;
+
+   MakeIoInt;
+
 END; (* ConsDevice.KeyAvail *)
 
-(*#CPAGE 20*)
+
+(**********************************************************************)
+(* Proc. Name     : ConsDevice.TimeoutAction
+(* Function       : 
+(**********************************************************************)
+PROCEDURE ConsDevice.TimeoutAction;
+
+BEGIN
+   PushF;
+   InterruptsOff;
+   IF _InpBusy THEN
+   BEGIN
+      _InpBusy := FALSE;
+      _InpEnabled := FALSE;
+      _Status := TIMEOUT;
+      MakeIoInt;
+   END;
+   PopF;
+END; (* ConsDevice.TimeoutAction *)
+
+
 (**********************************************************************)
 (* Proc. Name     : ConsDevice.IntrAction
 (* Function       : 
@@ -609,20 +968,20 @@ BEGIN
    IF InForeground AND (NOT KP.Eaten) THEN
    WITH State8000, KP, KeybQ DO
    BEGIN
-      IF ((Key AND $FF) = 27) AND NOT _Busy THEN
+      IF ((Key AND $FF) = 27) AND NOT _InpBusy THEN
       BEGIN
          Flush;
-         IR := IR OR (LONGINT(1) SHL (31-_OprInt));
+         MakeOprInt;
       END ELSE
 
 {$IFDEF ALTPHARDCPY}
       IF Key = PRINT_HOTKEY THEN _PrintFlag := NOT _PrintFlag ELSE
 {$ENDIF}
       BEGIN
-         IF _Busy AND IsEmpty
+         IF _InpBusy AND IsEmpty
             THEN KeyAvail(Key)
             ELSE InsKey(Key);
-         _Busy := FALSE;
+         _InpBusy := FALSE;
       END;
       EatKeystroke;
       Eaten := TRUE;
@@ -630,7 +989,6 @@ BEGIN
 END; (* ConsDevice.IntrAction *)
 
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : ComInterrupt
 (* Function       : 
@@ -647,59 +1005,99 @@ BEGIN
    SendEOI;
 END; (* ComInterrupt *)
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : ComDevice.Init
 (* Function       : 
 (**********************************************************************)
 CONSTRUCTOR ComDevice.Init (DevNo: WORD;
                             IoBase: WORD;
-                            IRQ,IoInt,OprInt: BYTE);
- 
+                            IRQ,IoInt,OprInt: BYTE;
+                            ConnectLine,ReadyLine: BYTE);
+
+(* IRQ: If std. COM port = Interrupt request no. (0-7).
+        If multiport device: Ord(MultiportID) SHL 4 + (portno-1);
+*)
+
+
 VAR
    Dummy: BYTE;
+   Multiport: BOOLEAN;
 
 BEGIN
    INHERITED Init(DevNo,IoInt,OprInt);
 
-   _IntHandle     := AllocateIntHandle(TRUE);
+   Multiport      := IRQ>15;
+
    _IoBase        := IoBase;
    _IRQ           := IRQ;
-   _ISRMask       := 1 SHL IRQ;
+   _ISRMask       := 1 SHL (IRQ AND $F);
    _InService     := FALSE;
    _TxActive      := FALSE;
-   _WrIntrPending := FALSE;
+   _ConnectLine   := ConnectLine;
+   _ReadyLine     := ReadyLine;
 
    TxQueue.Init;
-   ComIntrHndlr.InsHook(Self);
-   InitV(IRQ+8,_IntHandle,@ComInterrupt);
+
+   IF NOT Multiport THEN
+   BEGIN
+      _IntHandle     := AllocateIntHandle(TRUE);
+      ComIntrHndlr.InsHook(Self);
+      InitV(IRQ+8,_IntHandle,@ComInterrupt);
+   END;
 
    (* HW Init: *)
+   InterruptsOff;
    Port[_IoBase+UARTlcr] := Port[_IoBase+UARTlcr] AND $7F;  (* Reset Div.Access Latch *)
    Dummy := Port[_IoBase+UARTrbr];  (* read any pending char *)
-   Dummy := Port[_IoBase+UARTlsr];  (* read LSR to clear error *)
-   Port[_IoBase+UARTier] := 1; (* Enable Rx interrupts on 8250 *)
+   _LSRMirror := Port[_IoBase+UARTlsr];  (* read LSR to clear error *)
+   _MSRMirror := Port[_IoBase+UARTmsr];
+
+   IF (_ConnectLine AND _MSRMirror) <> _ConnectLine THEN _IERMirror := 8 ELSE
+   IF (_ConnectLine OR _ReadyLine) <> 0
+      THEN _IERMirror := 8+1  (* MSR + RX *)
+      ELSE _IERMirror := 1;   (* RX *)
+   Port[_IoBase+UARTier] := _IERMirror;
+
+   _TxHold := (_MSRMirror AND _ReadyLine) <> _ReadyLine;
+
    Port[_IoBase+UARTmcr] := Port[_IoBase+UARTmcr] OR $B; (* DTR,RTS,OUT2 ON *)
 
-   Port[I8259_1Base+1] := Port[I8259_1Base+1] AND NOT _ISRMask;  (* Enable on 8259 *)
+   IF NOT Multiport THEN
+      Port[I8259_1Base+1] := Port[I8259_1Base+1] AND NOT _ISRMask;  (* Enable on 8259 *)
+
+   InterruptsOn;
 
 END; (* ComDevice.Init *)
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : ComDevice.Done
 (* Function       : 
 (**********************************************************************)
 DESTRUCTOR ComDevice.Done;
 
+VAR Multiport: BOOLEAN;
+
 BEGIN
-   Port[I8259_1Base+1] := Port[I8259_1Base+1] OR _ISRMask;  (* Disable on 8259 *)
+   Multiport := _IRQ>15;
+
+   IF NOT Multiport THEN
+      Port[I8259_1Base+1] := Port[I8259_1Base+1] OR _ISRMask;  (* Disable on 8259 *)
    Port[_IoBase+UARTier] := 0; (* Disable interrupts on 8250 *)
    Port[_IoBase+UARTmcr] := Port[_IoBase+UARTmcr] AND NOT $B; (* DTR,RTS,OUT2 OFF *)
    INHERITED Done;
 END; (* ComDevice.Done *)
 
-(*#CPAGE 20*)
+
+(**********************************************************************)
+(* Func. Name     : ComDevice.Disconnected
+(* Function       : 
+(**********************************************************************)
+FUNCTION ComDevice.Disconnected: BOOLEAN;
+
+BEGIN
+   Disconnected := (_MSRMirror AND _ConnectLine) <> _ConnectLine;
+END; (* ComDevice.Disconnected *)
+
 (**********************************************************************)
 (* Proc. Name     : ComDevice.WriteChar
 (* Function       : 
@@ -711,17 +1109,17 @@ BEGIN
    InterruptsOff;
    WITH TxQueue DO
    BEGIN
-      IF _TxActive THEN InsKey(Ord(C)) ELSE
+      IF _TxActive OR _TxHold THEN InsKey(Ord(C)) ELSE
       BEGIN  (* Start UART Tx *)
          Port[_IoBase+UARTthr] := Ord(C);
-         Port[_IoBase+UARTier] := Port[_IoBase+UARTier] OR 2; (* Enable Tx interrupts on 8250 *)
+         _IERMirror := _IERMirror OR 2; (* Enable Tx interrupts on 8250 *)
+         Port[_IoBase+UARTier] := _IERMirror; 
          _TxActive := TRUE;
       END;
    END;
    PopF;
 END; (* ComDevice.WriteChar *)
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : ComDevice.Wr
 (* Function       : 
@@ -729,31 +1127,55 @@ END; (* ComDevice.WriteChar *)
 PROCEDURE ComDevice.Wr (Modif: BYTE);
 
 BEGIN
-   IF TxQueue.IsFull THEN
+   IF _InpBusy OR _WrIntrPending THEN Timer.CancelTimeout;
+   _InpEnabled := FALSE;
+   _InpBusy := FALSE;
+
    WITH State8000 DO
    BEGIN
-      Ex22 := 0;
-      Ex23 := 1;
-   END ELSE
+      Ex22 := Ord(Disconnected);
+      Ex23 := Ord(TxQueue.IsFull);
+      IF BOOLEAN(Ex22 OR Ex23) THEN Exit;
+   END;
+
+   PushF;
+   InterruptsOff;
+
+   IF Modif = WRITE_PROMPT
+      THEN _Status := Ord(_Prompt)
+      ELSE _Status := (State8000.SrvcParam.Wreg SHR 8) AND $7F;
+
+   IF _Status=0 THEN MakeIoInt ELSE
    BEGIN
-      _Status := (State8000.SrvcParam.Wreg SHR 8) AND $7F;
       WriteChar(Chr(_Status));
+
       WITH State8000 DO
       BEGIN
+         IF NOT UseComTxBuffer THEN _WrIntrPending := TRUE ELSE
          IF TxQueue.IsFull
             THEN _WrIntrPending := TRUE
-            ELSE IR := IR OR (LONGINT(1) SHL (31-_IoInt));
+            ELSE MakeIoInt;
          Ex22 := 0;
          Ex23 := 0;
       END;
 
-      IF _Busy THEN Timer.CancelTimeout;
-      _Busy := FALSE;
+      WITH Timer DO
+         IF _WrIntrPending THEN SetTimeout(_TimeoutVal,SEC);
    END;
+   PopF;
 END; (* ComDevice.Wr *)
 
+(**********************************************************************)
+(* Proc. Name     : ComDevice.DisconnectRequest
+(* Function       : 
+(**********************************************************************)
+PROCEDURE ComDevice.DisconnectRequest;
 
-(*#CPAGE 20*)
+BEGIN
+   Port[_IoBase+UARTmcr] := Port[_IoBase+UARTmcr] AND NOT 1; (* DTR OFF *)
+   DisconectTimer.SetTimeout(1,SEC);
+END; (* ComDevice.DisconnectRequest *)
+
 (**********************************************************************)
 (* Func. Name     : ComDevice.DeviceID
 (* Function       : 
@@ -764,7 +1186,6 @@ BEGIN
    DeviceID := 'TERMINAL';
 END; (* ComDevice.DeviceID *)
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : ComDevice.KeyAvail
 (* Function       : Called when a keystroke is available for RC8000
@@ -774,11 +1195,48 @@ PROCEDURE ComDevice.KeyAvail (Key: WORD);
 BEGIN
    Timer.CancelTimeout;
    _Status := Key AND $7F;
-   _EchoOnSense := TRUE;   (* DONT echo here, this is part of an interrupt routine *)
-   WITH State8000 DO IR := IR OR (LONGINT(1) SHL (31-_IoInt));
+   IF _Status = 0 THEN  _Status := BLIND_CHAR;
+   IF _Status = 127 THEN _Status := 0;
+   _InKey := _Status;  (* Save for echo *)
+   HandleInputConversion;
+
+   MakeIoInt;
 END; (* ComDevice.KeyAvail *)
 
-(*#CPAGE 20*)
+
+(**********************************************************************)
+(* Proc. Name     : ComDevice.TimeoutAction
+(* Function       : 
+(**********************************************************************)
+PROCEDURE ComDevice.TimeoutAction;
+
+BEGIN
+   PushF;
+   InterruptsOff;
+   IF _InpBusy OR _WrIntrPending THEN
+   BEGIN
+      _InpBusy := FALSE;
+      _InpEnabled := FALSE;
+      IF _WrIntrPending THEN TxQueue.RemoveLast;
+      _WrIntrPending := FALSE;
+      _Status := TIMEOUT; (* Status = timeout *)
+      MakeIoInt;
+   END;
+   PopF;
+END; (* ComDevice.TimeoutAction *)
+
+
+(**********************************************************************)
+(* Proc. Name     : ComDevice.DisconnectTimeoutAction
+(* Function       : Set DTR high, 1 sec. has passed
+(**********************************************************************)
+PROCEDURE ComDevice.DisconnectTimeoutAction;
+
+BEGIN
+   Port[_IoBase+UARTmcr] := Port[_IoBase+UARTmcr] OR 1; (* DTR ON *)
+END; (* ComDevice.DisconnectTimeoutAction *)
+
+
 (**********************************************************************)
 (* Proc. Name     : ComDevice.IntrAction
 (* Function       : 
@@ -787,9 +1245,7 @@ END; (* ComDevice.KeyAvail *)
 PROCEDURE ComDevice.IntrAction (VAR Param);
 
 VAR
-   IER,
    Key,
-   LineState,
    IntrIdent: BYTE;
 
 BEGIN
@@ -798,48 +1254,99 @@ BEGIN
    IF IntrIdent = 4 THEN
    WITH State8000, KeybQ DO
    BEGIN  (* Rx char avail *)
-      LineState := Port[_IoBase+UARTlsr];
-      IF (LineState AND 12) <> 0
-         THEN Key := 26  (* Parity or framing error *)
-         ELSE Key := Port[_IoBase+UARTrbr] AND $7F;
+      _LSRMirror := Port[_IoBase+UARTlsr];
+      Key := Port[_IoBase+UARTrbr] AND $7F;
+      IF (_LSRMirror AND 12) <> 0
+         THEN Key := 26;  (* Parity or framing error *)
 
-      IF (Key = 27) AND NOT _Busy THEN
+      IF (Key = 27) AND NOT _InpBusy THEN
       BEGIN
          Flush;
          TxQueue.Flush;
-         IR := IR OR (LONGINT(1) SHL (31-_OprInt));
+         MakeOprInt;
       END ELSE
 
       BEGIN
-         IF _Busy AND IsEmpty
+         IF _InpBusy AND IsEmpty
             THEN KeyAvail(Key)
             ELSE InsKey(Key);
-         _Busy := FALSE;
+         _InpBusy := FALSE;
       END;
    END ELSE
 
    IF IntrIdent = 2 THEN
-   WITH State8000, TxQueue DO
-   BEGIN  (* Tx empty *)
-      IF IsEmpty THEN
-      BEGIN  (* Stop Tx *)
-         Port[_IoBase+UARTier] := Port[_IoBase+UARTier] AND NOT 2; (* Disable Tx interrupts on 8250 *)
-         _TxActive := FALSE;
-      END ELSE
-         Port[_IoBase+UARTthr] := GetKey AND $7F;
-      IF _WrIntrPending
-         THEN IR := IR OR (LONGINT(1) SHL (31-_IoInt));
-      _WrIntrPending := FALSE;
+   BEGIN
+      WITH State8000, TxQueue DO
+      IF (Port[_IoBase+UARTlsr] AND $20) <> 0 THEN  (* 8250 bug *)
+      BEGIN  (* Txhr empty *)
+         IF IsEmpty OR _TxHold THEN
+         BEGIN  (* Stop Tx *)
+            _IERMirror := _IERMirror AND NOT 2; (* Disable Tx interrupts on 8250 *)
+            _TxActive := FALSE;
+         END ELSE
+         BEGIN
+            Port[_IoBase+UARTthr] := GetKey AND $7F;
+            _TxActive := TRUE;
+         END;
+
+         IF _WrIntrPending AND (NOT UseComTxBuffer OR IsEmpty) THEN
+         BEGIN
+            Timer.CancelTimeout;
+            MakeIoInt;
+            _WrIntrPending := FALSE;
+         END;
+      END;
+   END ELSE
+   
+   IF IntrIdent = 0 THEN
+   BEGIN  (* MSR changed *)
+      _MSRMirror := Port[_IOBase+UARTmsr];
+
+      IF ((_ConnectLine SHR 4) AND _MSRMirror) <> 0 THEN
+      BEGIN  (* Connect status changed *)
+
+         IF (_ConnectLine AND _MSRMirror) = 0 THEN
+         BEGIN  (* Now disconnected *)
+            WITH State8000 DO
+            IF _WrIntrPending OR _InpBusy      
+               THEN MakeIoInt;
+
+            _WrIntrPending := FALSE;
+            _InpBusy := FALSE;
+            _InpEnabled := FALSE;
+            TxQueue.Flush;
+            KeybQ.Flush;
+            _IERMirror := 8;  (* Only MSR *)
+         END ELSE
+
+         BEGIN  (* Now connected *)
+            Key := Port[_IoBase+UARTrbr];  (* Dummy read *)
+            _LSRMirror := Port[_IoBase+UARTlsr]; (* Clear error *)
+            _IERMirror := 8+2+1;  (* MSR+RX+TX *)
+         END;
+      END;
+
+      IF ((_ReadyLine SHR 4) AND _MSRMirror) <> 0 THEN
+      BEGIN  (* Ready/Busy handshake input changed *)
+         IF (_ReadyLine AND _MSRMirror) = 0 THEN
+         BEGIN  (* Now busy *)
+            _TxHold := TRUE;
+         END ELSE
+         BEGIN  (* Now ready *)
+            _TxHold := FALSE;
+            IF (NOT TXQueue.IsEmpty) AND
+               ((_MSRMirror AND _ConnectLine) = _ConnectLine) THEN
+               _IERMirror := _IERMirror OR 2;  (* Enable TX *)
+         END;
+      END;
    END;
 
    (* Trig interrupt: *)
-   IER := Port[_IoBase+UARTier];
    Port[_IoBase+UARTier] := 0;
-   Port[_IoBase+UARTier] := IER;
+   Port[_IoBase+UARTier] := _IERMirror;
          
 END; (* ComDevice.IntrAction *)
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : ComDevice.MakeLineSettings
 (* Function       : 
@@ -866,9 +1373,6 @@ BEGIN
 END; (* ComDevice.MakeLineSettings *)
 
 
-
-
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : ComIntrHandler.DoHooks
 (* Function       : 
@@ -897,7 +1401,169 @@ BEGIN
 END; (* ComIntrHandler.DoHooks *)
 
 
-(*#CPAGE 20*)
+(**********************************************************************)
+(* Proc. Name     : Multiport4Interrupt
+(* Function       : 
+(**********************************************************************)
+PROCEDURE Multiport4Interrupt (BP: WORD);
+INTERRUPT;
+
+VAR
+   Regs: IntRegisters ABSOLUTE BP;
+   ISR: BYTE;
+
+BEGIN
+   Port[I8259_1Base] := $0B;  (* Read ISR *)
+   ISR := Port[I8259_1Base];
+
+   IF (MultiPort4Handlers[HIGH_ADDR] <> NIL) AND
+      ((ISR AND MultiPort4Handlers[HIGH_ADDR]^._ISRMask) <> 0)
+      THEN MultiPort4Handlers[HIGH_ADDR]^.DoHooks(Regs);
+
+   IF (MultiPort4Handlers[LOW_ADDR] <> NIL) AND
+      ((ISR AND MultiPort4Handlers[LOW_ADDR]^._ISRMask) <> 0)
+      THEN MultiPort4Handlers[LOW_ADDR]^.DoHooks(Regs);
+
+   InterruptsOn;
+   SendEOI;
+END; (* Multiport4Interrupt *)
+
+
+(**********************************************************************)
+(* Proc. Name     : Multiport4Handler.Init
+(* Function       : 
+(**********************************************************************)
+CONSTRUCTOR Multiport4Handler.Init (Id: Multiport4ID; IRQ: BYTE);
+
+VAR
+   I: WORD;
+
+BEGIN
+   INHERITED Init;
+
+   _Id            := Id;
+   _IntHandle     := AllocateIntHandle(TRUE);
+   _IRQ           := IRQ;
+   _ISRMask       := 1 SHL IRQ;
+
+   InitV(IRQ+8,_IntHandle,@Multiport4Interrupt);
+
+   FOR I := 1 TO 4 DO
+   BEGIN
+      _PortUsed[I] := FALSE;
+      Port[Multiport4AddrMap[Id,I]+UARTier] := 0;  (* Disable all *)
+   END;
+
+   Port[I8259_1Base+1] := Port[I8259_1Base+1] OR _ISRMask;  (* Disable on 8259 *)
+
+   (* Seems like disabling "global interrupt" on the multicard draws the
+      interrupt line *active*... generate a trigger edge by enabling and
+      disabling while all IER's are =0
+   *)
+   Port[Multiport4VectorMap[Id]] := $80;   (* Enable global int. *)
+   Port[Multiport4VectorMap[Id]] := $00;   (* Disable global int. *)
+
+   MultiPort4Handlers[Id] := @Self;
+
+END; (* Multiport4Handler.Init *)
+
+
+(**********************************************************************)
+(* Proc. Name     : Multiport4Handler.Done
+(* Function       : 
+(**********************************************************************)
+DESTRUCTOR Multiport4Handler.Done;
+
+VAR
+   I: WORD;
+
+BEGIN
+   Port[I8259_1Base+1] := Port[I8259_1Base+1] OR _ISRMask;  (* Disable on 8259 *)
+   Port[Multiport4VectorMap[_Id]] := 0;   (* Disable global int. *)
+   FOR I := 1 TO 4 DO
+   BEGIN
+      _PortUsed[I] := FALSE;
+      Port[Multiport4AddrMap[_Id,I]+UARTier] := 0;  (* Disable all *)
+   END;
+END; (* Multiport4Handler.Done *)
+
+
+(**********************************************************************)
+(* Proc. Name     : Multiport4Handler.InsHook
+(* Function       : 
+(**********************************************************************)
+PROCEDURE Multiport4Handler.InsHook (VAR Hook: ComDevice);
+
+BEGIN
+   INHERITED InsHook(Hook);
+   _PortUsed[(Hook._IRQ AND $F)+1] := TRUE;
+END; (* Multiport4Handler.InsHook *)
+
+
+(**********************************************************************)
+(* Func. Name     : Multiport4Handler.PortUsed
+(* Function       : 
+(**********************************************************************)
+FUNCTION Multiport4Handler.PortUsed (Port: BYTE): BOOLEAN;
+
+BEGIN
+   PortUsed := _PortUsed[Port];
+END; (* Multiport4Handler.PortUsed *)
+
+
+(**********************************************************************)
+(* Proc. Name     : Multiport4Handler.DoHooks
+(* Function       : 
+(**********************************************************************)
+PROCEDURE Multiport4Handler.DoHooks (VAR Param);
+
+VAR
+   P: DoubleNodePtr;
+   Vector: BYTE;
+
+BEGIN
+   REPEAT
+      Vector := Port[Multiport4VectorMap[_Id]];
+      P := HookList.Head;
+      WHILE P <> NIL DO
+      WITH ComDevicePtr(P)^ DO
+      BEGIN
+         IF (((NOT Vector) AND _ISRMask) <> 0) AND NOT _InService THEN
+         BEGIN
+            _InService := TRUE;
+            IntrAction(Param);
+            _InService := FALSE;
+         END;
+         P := HookList.Next(P);
+      END;
+   UNTIL (Vector AND $F) = $F;
+END; (* Multiport4Handler.DoHooks *)
+
+
+(**********************************************************************)
+(* Proc. Name     : ConsPostInit
+(* Function       : Enable global & 8259 interrupts for multiport cards
+(**********************************************************************)
+PROCEDURE ConsPostInit;
+
+BEGIN
+   IF (MultiPort4Handlers[HIGH_ADDR] <> NIL) THEN
+   WITH MultiPort4Handlers[HIGH_ADDR]^ DO
+   BEGIN
+      Port[I8259_1Base+1] := Port[I8259_1Base+1] AND NOT _ISRMask;  (* Enable on 8259 *)
+      Port[Multiport4VectorMap[_Id]] := $80;   (* Enable global int. *)
+   END;
+      
+   IF (MultiPort4Handlers[LOW_ADDR] <> NIL) THEN
+   WITH MultiPort4Handlers[LOW_ADDR]^ DO
+   BEGIN
+      Port[I8259_1Base+1] := Port[I8259_1Base+1] AND NOT _ISRMask;  (* Enable on 8259 *)
+      Port[Multiport4VectorMap[_Id]] := $80;   (* Enable global int. *)
+   END;
+
+END; (* ConsPostInit *)
+
+
 (**********************************************************************)
 (*****              UNIT ENTRY AND EXIT PROCEDURES
 (**********************************************************************)
@@ -905,7 +1571,6 @@ END; (* ComIntrHandler.DoHooks *)
 VAR
    ExitSave  : pointer;
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : UnitExit
 (* Function       : Exit procedure.
@@ -914,15 +1579,13 @@ PROCEDURE UnitExit;
 
 BEGIN
    Exitproc := ExitSave;
-{$IFDEF CONSDUMP}
-   Close(DF);
-{$ENDIF}
+   IF MultiPort4Handlers[HIGH_ADDR] <> NIL THEN MultiPort4Handlers[HIGH_ADDR]^.Done;
+   IF MultiPort4Handlers[LOW_ADDR] <> NIL THEN MultiPort4Handlers[LOW_ADDR]^.Done;
 END; (* UnitExit *)
 
 
 
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : UnitEntry
 (* Function       : Entry procedure for unit.
@@ -934,11 +1597,8 @@ BEGIN
    Exitproc := @UnitExit;
 
    ComIntrHndlr.Init;
-{$IFDEF CONSDUMP}
-   Assign(DF,'CONSDUMP.OUT');
-   Rewrite(DF);
-{$ENDIF}
-
+   MultiPort4Handlers[HIGH_ADDR] := NIL;
+   MultiPort4Handlers[LOW_ADDR]  := NIL;
 END; (* UnitEntry *)
 
 

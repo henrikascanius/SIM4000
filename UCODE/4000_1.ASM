@@ -53,21 +53,13 @@ _xl     MACRO wreg                      ; Load exception register
         mov     ebx,ds:[eax*4]
         jc      @@1                     ; jump on RH HW
 
-        shl     ebx,10
-        setc    ch
-        shl     ch,2
-        mov     S8.Ex21,ch              ; set Ex21
-        shl     ebx,1
+        shl     ebx,11
         setc    ch
         shl     ebx,1
         setc    cl
         incic
 @@1:
-        shl     ebx,22
-        setc    ch
-        shl     ch,2
-        mov     S8.Ex21,ch              ; set Ex21
-        shl     ebx,1
+        shl     ebx,23
         setc    ch
         shl     ebx,1
         setc    cl
@@ -87,9 +79,8 @@ _xs     MACRO wreg                      ; Store exception register
         mov     ebx,ecx
         shl     bh,1
         add     bl,bh
-        or      bl,S8.Ex21              ; Incl. Ex21
-        shl     ebx,29
-        shr     ebx,9
+        shl     ebx,30
+        shr     ebx,10
         and     ds:[eax*4],RightHWMask
         or      ds:[eax*4],ebx
         incic
@@ -97,10 +88,8 @@ _xs     MACRO wreg                      ; Store exception register
         mov     ebx,ecx
         shl     bh,1
         add     bl,bh
-        shr     bh,1
-        or      bl,S8.Ex21              ; Incl. Ex21
-        shl     ebx,29
-        shr     ebx,21
+        shl     ebx,30
+        shr     ebx,22
         and     ds:[eax*4],LeftHWMask
         or      ds:[eax*4],ebx
         incic

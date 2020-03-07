@@ -1,5 +1,3 @@
-(*#LEFT 6*)(*#TITLE ""*)
-
 (**********************************************************************)
 (* Unit name      : DOSDEV.PAS
 (* Pascal Version : Borland Pascal 7.0
@@ -42,8 +40,12 @@ TYPE
    DosDevicePtr     =   ^DosDevice;
    DosDevice        =   OBJECT (IoDevice)
 
-                           CONSTRUCTOR Init(DevNo: WORD; Int: BYTE);
+                           CONSTRUCTOR Init(DevNo: WORD; Int: BYTE;
+                                            AutoName: STRING; Conv: BYTE; 
+                                            Timo: WORD);
                            DESTRUCTOR Done; VIRTUAL;
+
+                           PROCEDURE  TimeoutAction;         VIRTUAL;
 
                            PROCEDURE  Sense(Modif: BYTE);    VIRTUAL;
                            PROCEDURE  Control(Modif: BYTE);  VIRTUAL;
@@ -56,6 +58,7 @@ TYPE
                            _Int:      BYTE;
 
                            Connected,
+                           AutoConnect,
                            OutpMode,
                            TxtMode,
                            TxtDosMode,
@@ -66,6 +69,7 @@ TYPE
                            Status0,
                            Status4: LONGINT;
 
+                           TimeoutVal,
                            BufGot,
                            BufLast   :  WORD;
 
@@ -91,7 +95,9 @@ IMPLEMENTATION
 USES
    OpString,
    Intf,
+   Intr,
    OpInt,
+   OpDos,
    Scrn,
    Util;
 
@@ -99,15 +105,8 @@ USES
 CONST
    (* Sense0 status bits: *)
 
-   INTERVENTION_0     =  LONGINT(1) SHL 23;
-   PARITY_0           =  LONGINT(1) SHL 22;
-   TIMER_0            =  LONGINT(1) SHL 21;
-   OVERRUN_0          =  LONGINT(1) SHL 20;
    END_OF_DOC_0       =  LONGINT(1) SHL 18;
-   LOCAL_0            =  LONGINT(1) SHL 15;
-   FAULT_0            =  LONGINT(1) SHL 14;
-   SYNC_ERROR_0       =  LONGINT(1) SHL 13;
-   HEADS_MOVING_0     =  LONGINT(1) SHL 12;
+   INTERVENTION_0     =  END_OF_DOC_0;  (* !!! *)
 
 
 
@@ -118,7 +117,22 @@ CONST
    LogOpen: BOOLEAN = FALSE;
 {$ENDIF}
 
-(*#CPAGE 20*)
+
+(**********************************************************************)
+(* Proc. Name     : DosDevice.TimeoutAction
+(* Function       : 
+(**********************************************************************)
+PROCEDURE DosDevice.TimeoutAction;
+
+BEGIN
+   IF Connected THEN
+   BEGIN  (* Auto-close *)
+      WITH State8000 DO IR := IR OR (LONGINT(1) SHL (31-_Int));
+   END;
+END; (* DosDevice.TimeoutAction *)
+
+
+
 (**********************************************************************)
 (* Proc. Name     : DosDevice.TransferSize
 (* Function       : 
@@ -129,7 +143,6 @@ BEGIN
    CurrSize := (WReg SHR 8);
 END; (* DosDevice.TransferSize *)
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : DosDevice.SetMode
 (* Function       : 
@@ -142,7 +155,6 @@ BEGIN
 END; (* DosDevice.SetMode *)
 
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : DosDevice.OpenF
 (* Function       : 
@@ -169,7 +181,7 @@ BEGIN
    NSize := (CurrSize SHR 1) * 3;
    IF (NSize = 0) OR (NSize > NameSize) THEN
    BEGIN
-      Status0 := FAULT_0;
+      Status0 := INTERVENTION_0;
       Status4 := 0;
       DataInterrupt;
       Exit;
@@ -207,7 +219,6 @@ BEGIN
    DataInterrupt;
 END; (* DosDevice.OpenF *)
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : DosDevice.CloseF
 (* Function       : 
@@ -218,19 +229,18 @@ BEGIN
    Status0 := 0;
    IF Connected THEN
    BEGIN
-      IF NOT FlushBuffer THEN Status0 := FAULT_0 ELSE
+      IF NOT FlushBuffer THEN Status0 := INTERVENTION_0 ELSE
       BEGIN
 {$I-}
          Close(DosFile);
 {$I+}
-         IF IOResult<>0 THEN Status0 := FAULT_0;
+         IF IOResult<>0 THEN Status0 := INTERVENTION_0;
       END;
       Connected := FALSE;
    END;
    DataInterrupt;
 END; (* DosDevice.CloseF *)
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : DosDevice.InputData
 (* Function       : 
@@ -267,7 +277,13 @@ BEGIN
       IF BufGot >= BufLast THEN
       BEGIN
          BufLast := 0;
+{$I-}
          IF NOT EMSent THEN BlockRead(DosFile,FBufferP^,BufferSize,BufLast);
+{$I+}
+         IF IoResult <> 0 THEN
+         BEGIN
+            Status0 := INTERVENTION_0;
+         END ELSE
          IF BufLast = 0 THEN
          BEGIN
             IF EMSent OR NOT TxtMode THEN Status0 := END_OF_DOC_0 ELSE 
@@ -332,7 +348,6 @@ BEGIN
 
 END; (* DosDevice.InputData *)
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : DosDevice.OutputData
 (* Function       : 
@@ -348,7 +363,7 @@ VAR
    BEGIN
       IF NOT FlushBuffer THEN
       BEGIN
-         Status0 := FAULT_0;
+         Status0 := INTERVENTION_0;
          Max := Cnt;
       END;
    END;
@@ -357,6 +372,24 @@ VAR
 BEGIN
    Status0 := 0;
    Status4 := 0;
+
+   IF (NOT Connected) AND AutoConnect THEN
+   BEGIN  (* Auto-assign DOS handle (intended for netw. printing) *)
+      Assign(DosFile,DosFileName);
+{$I-}
+      IF ExistFile(DosFileName) THEN Reset(DosFile,1) ELSE Rewrite(DosFile,1);
+{$I+}
+      IF IOResult=0 THEN
+      BEGIN
+         Seek(DosFile,FileSize(DosFile));
+         Connected := TRUE;
+         OutpMode := TRUE;
+         EMSent := FALSE;
+         BufGot := 0;
+         BufLast := BufferSize-1;
+      END ELSE Status0 := INTERVENTION_0;
+   END;
+
    IF (NOT Connected) OR (NOT OutpMode) THEN
    BEGIN
       Status0 := INTERVENTION_0;
@@ -423,6 +456,23 @@ BEGIN
 
    UNTIL (Cnt>=Max) OR (Status0<>0);
 
+   IF EMSent AND AutoConnect THEN
+   BEGIN  (* Auto-close *)
+      IF NOT FlushBuffer THEN Status0 := INTERVENTION_0 ELSE
+      BEGIN
+{$I-}
+         Close(DosFile);
+{$I+}
+         IF IOResult<>0 THEN Status0 := INTERVENTION_0;
+      END;
+      Connected := FALSE;
+   END ELSE
+
+   BEGIN
+      IF AutoConnect AND (TimeoutVal > 0)
+         THEN Timer.Settimeout(TimeoutVal,SEC);
+   END;
+
    Status4 := Cnt;
    DataInterrupt;
 
@@ -430,7 +480,6 @@ END; (* DosDevice.OutputData *)
 
 
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Func. Name     : DosDevice.FlushBuffer
 (* Function       : 
@@ -439,27 +488,30 @@ FUNCTION DosDevice.FlushBuffer: BOOLEAN;
 
 BEGIN
    IF Connected AND OutpMode AND (BufGot > 0) THEN
+{$I-}
    BEGIN
       BlockWrite(DosFile,FBufferP^,BufGot,BufLast);
-      IF BufLast < BufGot THEN
+      IF (BufLast < BufGot) OR (IoResult<>0) THEN
       BEGIN
          Connected := FALSE;
          Close(DosFile);
+         IF IOResult<>0 THEN ;
          FlushBuffer := FALSE;
          EXIT;
       END;
+{$I+}
       BufGot := 0;
    END;
    FlushBuffer := TRUE;
 END; (* DosDevice.FlushBuffer *)
 
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : DosDevice.Init
 (* Function       : 
 (**********************************************************************)
-CONSTRUCTOR DosDevice.Init (DevNo: WORD; Int: BYTE);
+CONSTRUCTOR DosDevice.Init (DevNo: WORD; Int: BYTE;
+                            AutoName: STRING; Conv: BYTE; Timo: WORD);
 
 VAR
    I: BYTE;
@@ -470,6 +522,15 @@ BEGIN
 
    Connected := FALSE;
    Busy := FALSE;
+   AutoConnect := AutoName <> '';
+   IF AutoConnect THEN
+   BEGIN
+      DosFileName := AutoName;
+      TxtMode := Conv>0;
+      TxtDosMode := Conv=2;
+   END;
+   TimeoutVal := Timo;
+      
    Status0 := 0;
    Status4 := 0;
 
@@ -479,7 +540,6 @@ BEGIN
 
 END; (* DosDevice.Init *)
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : DosDevice.Done
 (* Function       : 
@@ -503,7 +563,6 @@ BEGIN
    FreeMemCheck(FBufferP,BufferSize);
 END; (* DosDevice.Done *)
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : DosDevice.Sense
 (* Function       : 
@@ -562,7 +621,6 @@ BEGIN
    END;
 END; (* DosDevice.Sense *)
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : DosDevice.Control
 (* Function       : 
@@ -571,6 +629,8 @@ PROCEDURE DosDevice.Control (Modif: BYTE);
 
 
 BEGIN
+   Timer.CancelTimeout;
+
    WITH State8000, SrvcParam DO
    BEGIN
 {$IFDEF LOG}
@@ -616,7 +676,6 @@ BEGIN
 END; (* DosDevice.Control *)
 
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Func. Name     : DosDevice.DeviceID
 (* Function       : 
@@ -627,7 +686,6 @@ BEGIN
    DeviceID := 'DOS Device';
 END; (* DosDevice.DeviceID *)
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : DosDevice.DataInterrupt
 (* Function       : 
@@ -638,13 +696,12 @@ BEGIN
 {$IFDEF LOG}
    WriteLn(Log,'Data interrupt');
 {$ENDIF}
-   WITH State8000 DO IR := IR OR (LONGINT(1) SHL (31-_Int));
+(*   WITH State8000 DO IR := IR OR (LONGINT(1) SHL (31-_Int)); *)
    Busy := FALSE;
 END; (* DosDevice.DataInterrupt *)
 
 
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (*****              UNIT ENTRY AND EXIT PROCEDURES
 (**********************************************************************)
@@ -653,7 +710,6 @@ VAR
 
    ExitSave  : pointer;
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : UnitExit
 (* Function       : Exit procedure.
@@ -668,7 +724,6 @@ BEGIN
 END; (* UnitExit *)
 
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : UnitEntry
 (* Function       : Entry procedure for unit.

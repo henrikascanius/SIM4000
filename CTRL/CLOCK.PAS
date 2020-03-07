@@ -1,5 +1,3 @@
-(*#LEFT 6*)(*#TITLE ""*)
-
 (**********************************************************************)
 (* Unit name      : CLOCK.PAS
 (* Pascal Version : Borland Pascal 7.0
@@ -61,7 +59,6 @@ CONST
                         (* ALSO FOUND IN INSTMACC.ASM *)
 
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : ClockDevice.Init
 (* Function       : 
@@ -81,7 +78,6 @@ BEGIN
    TickHndlr.InsHook(Self);
 END; (* ClockDevice.Init *)
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : ClockDevice.Done
 (* Function       : 
@@ -101,7 +97,6 @@ END; (* ClockDevice.Done *)
 *)
 
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : ClockDevice.Sense
 (* Function       : 
@@ -171,7 +166,6 @@ BEGIN
       State8000.SrvcParam.WReg := LONGINT (_Cnt AND $3F) SHL 16;
 END; (* ClockDevice.Sense *)
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Func. Name     : ClockDevice.DeviceID
 (* Function       : 
@@ -183,7 +177,6 @@ BEGIN
 END; (* ClockDevice.DeviceID *)
 
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : ClockDevice.IntrAction
 (* Function       : 
@@ -196,7 +189,6 @@ BEGIN
       IF NOT Trace THEN IR := IR OR (LONGINT(1) SHL (31-_Int));
 END; (* ClockDevice.IntrAction *)
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (*****              UNIT ENTRY AND EXIT PROCEDURES
 (**********************************************************************)
@@ -205,7 +197,6 @@ VAR
 
    ExitSave  : pointer;
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : UnitExit
 (* Function       : Exit procedure.
@@ -219,7 +210,6 @@ END; (* UnitExit *)
 
 
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : UnitEntry
 (* Function       : Entry procedure for unit.

@@ -1,5 +1,3 @@
-(*#LEFT 6*)(*#TITLE ""*)
-
 (**********************************************************************)
 (* Unit name      : POPUP.PAS
 (* Pascal Version : Borland Pascal 7.0
@@ -56,7 +54,6 @@ USES
 
 
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Func. Name     : PopUpPrim
 (* Function       : 
@@ -175,7 +172,6 @@ BEGIN
 
    END;
 END; (* PopUpPrim *)
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : PopErr
 (* Function       : 
@@ -188,7 +184,6 @@ END; (* PopErr *)
 
 
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Func. Name     : PopUpError
 (* Function       : 
@@ -205,7 +200,6 @@ END; (* PopUpError *)
 
 
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Func. Name     : PopUpMessage
 (* Function       : 
@@ -220,7 +214,6 @@ BEGIN
                              TRUE,TRUE,TRUE,0);
 END; (* PopUpMessage *)
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : PopInf
 (* Function       : 
@@ -231,7 +224,6 @@ BEGIN
    PopUpInfo(Mess,0,Mess,'');
 END; (* PopInf *)
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Func. Name     : PopUpInfo
 (* Function       : 
@@ -248,7 +240,6 @@ BEGIN
                              TRUE,FALSE,FALSE,0);
 END; (* PopUpInfo *)
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Func. Name     : PopUpYN
 (* Function       : 
@@ -275,7 +266,6 @@ BEGIN
 END; (* PopUpYN *)
 
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : PopUpDone
 (* Function       : 
@@ -293,7 +283,6 @@ END; (* PopUpDone *)
 
 
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (*****              UNIT ENTRY AND EXIT PROCEDURES
 (**********************************************************************)
@@ -302,7 +291,6 @@ VAR
 
    ExitSave  : pointer;
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : UnitExit
 (* Function       : Exit procedure.
@@ -316,7 +304,6 @@ END; (* UnitExit *)
 
 
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : UnitEntry
 (* Function       : Entry procedure for unit.

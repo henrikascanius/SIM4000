@@ -1,5 +1,3 @@
-(*#LEFT 6*)(*#TITLE ""*)
-
 (**********************************************************************)
 (* Unit name      : CONFIG.PAS
 (* Pascal Version : Borland Pascal 7.0
@@ -43,6 +41,7 @@ USES
    Io,
    Reader,
    Punch,
+   Expander,
    Cons,
    Rc851,
    Clock,
@@ -50,6 +49,7 @@ USES
    Rc433,
    DosDev,
    Util,
+   Scrn,
    Dos,
    OpCrt,
    OpString;
@@ -72,7 +72,6 @@ VAR
    DevTable: ARRAY [0..MaxDev] OF BOOLEAN;
 
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : Err
 (* Function       : 
@@ -88,17 +87,15 @@ BEGIN
 END; (* Err *)
 
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Func. Name     : IsDelim
 (* Function       : 
 (**********************************************************************)
 FUNCTION IsDelim(C: CHAR): BOOLEAN;
 BEGIN
-   IsDelim := (C='=') OR (C=',') OR (C=' ');
+   IsDelim := (C='=') OR (C=',') OR (C=' ') OR (C='.');
 END; (* IsDelim *)
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : CheckAss
 (* Function       : 
@@ -111,7 +108,6 @@ BEGIN
 END; (* CheckAss *)
 
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Func. Name     : NormaliseLine
 (* Function       : Removes lead & trail whitespace, multiple blanks etc.
@@ -149,7 +145,6 @@ BEGIN
 
 END; (* NormaliseLine *)
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Func. Name     : NextToken
 (* Function       : 
@@ -191,7 +186,6 @@ BEGIN
 
 END; (* NextToken *)
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : CheckEOL
 (* Function       : 
@@ -206,7 +200,6 @@ BEGIN
       THEN Err('Trailing garbage on line');
 END; (* CheckEOL *)
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Func. Name     : GetLine
 (* Function       : 
@@ -230,7 +223,6 @@ BEGIN
 
 END; (* GetLine *)
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : GetDevno
 (* Function       : 
@@ -257,7 +249,6 @@ BEGIN
 
 END; (* GetDevno *)
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : GetIntno
 (* Function       : 
@@ -292,8 +283,40 @@ BEGIN
 END; (* GetIntno *)
 
 
+(**********************************************************************)
+(* Proc. Name     : GetTmxDevNo
+(* Function       : 
+(**********************************************************************)
+PROCEDURE GetTmxDevNo (VAR S: STRING; Delim: CHAR; 
+                       DevNo: INTEGER; VAR Int: ARRAY OF BYTE);
 
-(*#CPAGE 20*)
+VAR
+   Token: STRING;
+   L: LONGINT;
+
+BEGIN
+   IF Int[0] > 0 THEN Err('More than one INTNO or TMXDEVNO parameter on line');
+   CheckAss(Delim);
+
+   IF DevNo < 0 THEN Err('DEVNO must be specified before TMXDEVNO');
+
+   Token := NextToken(S,Delim);
+   IF NOT (Str2Long(Token,L)) OR (Delim<>' ')
+      THEN Err('Error at TMXDEVNO');
+
+   IF (L<0) OR (L>63) OR (DevNo-L < 2) OR (DevNo-L > 17)
+      THEN Err('TMX device no. out of range');
+
+   IF (TypeOf(IoMap[L]^) <> TypeOf(InterruptExpander)) OR
+      (TypeOf(IoMap[L+1]^) <> TypeOf(InterruptExpander))
+      THEN Err('<TMXDEVNO> and <TMXDEVNO+1> must be interrupt expanders');
+
+   Int[0] := 64+L;
+   Int[1] := 65+L;
+
+END; (* GetTmxDevNo *)
+
+
 (**********************************************************************)
 (* Proc. Name     : DefineReader
 (* Function       : 
@@ -337,7 +360,6 @@ BEGIN
    END;
 END; (* DefineReader *)
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : DefinePunch
 (* Function       : 
@@ -381,7 +403,84 @@ BEGIN
    END;
 END; (* DefinePunch *)
 
-(*#CPAGE 20*)
+
+(**********************************************************************)
+(* Proc. Name     : DefineMultiport4
+(* Function       : 
+(**********************************************************************)
+PROCEDURE DefineMultiport4(VAR S: STRING; Id: Multiport4ID);
+
+VAR
+   IrqNo: BYTE;
+   Token: STRING;
+   Delim: CHAR;
+   L:     LONGINT;
+
+BEGIN
+   IF Multiport4Handlers[Id] <> NIL THEN Err('Multiport card already defined');
+   IrqNo := 0;
+   WHILE Length(S) > 0 DO
+   BEGIN
+      Token := NextToken(S,Delim);
+      IF Token = 'IRQ'   THEN
+      BEGIN
+         IF IrqNo>0 THEN Err('More than one IRQ parameter on line');
+         CheckAss(Delim);
+         Token := NextToken(S,Delim);
+         IF NOT (Str2Long(Token,L)) OR (Delim <> ' ') 
+            THEN Err('Error at IRQ-parameter');
+
+         IF NOT (L IN [2,3,4,5,7])
+            THEN Err('Only IRQ 2,3,4,5 and 7 is supported');
+
+         IrqNo := L;
+      END ELSE
+
+      IF Token = ''      THEN Err('Bad syntax at '''+Delim+'''')
+                         ELSE Err('Unknown parameter: '+Token);
+   END;
+
+   IF IrqNo = 0 THEN Err('Interrupt not defined');
+   Multiport4Handlers[Id] := New(Multiport4HandlerPtr,Init(Id,IrqNo));
+   IF Multiport4Handlers[Id] = NIL 
+      THEN Err('Could not create Multiport card');
+END; (* DefineMultiport4 *)
+
+
+(**********************************************************************)
+(* Proc. Name     : DefineInterruptExpander
+(* Function       : 
+(**********************************************************************)
+PROCEDURE DefineInterruptExpander (VAR S: STRING);
+
+VAR
+   Dev:  INTEGER;
+   Delim: CHAR;
+   Token: STRING;
+   Int:  ARRAY [0..0] OF BYTE;
+
+BEGIN
+   Int[0] := 0;
+   Dev    := -1;
+
+   WHILE Length(S) > 0 DO
+   BEGIN
+      Token := NextToken(S,Delim);
+      IF Token = 'DEVNO' THEN GetDevno(S,Delim,Dev) ELSE
+      IF Token = 'INTNO' THEN GetIntno(S,Delim,1,Int) ELSE
+      IF Token = ''      THEN Err('Bad syntax at '''+Delim+'''')
+                         ELSE Err('Unknown parameter: '+Token);
+   END;
+
+   IF Dev < 0 THEN Err('Device no. not defined');
+   IF Int[0] = 0 THEN Err('Interrupt not defined');
+
+   IF New(InterruptExpanderPtr,Init(Dev,Int[0])) = NIL
+      THEN Err('Could not create interrupt expander, device no. '+Long2Str(Dev));
+
+END; (* DefineInterruptExpander *)
+
+
 (**********************************************************************)
 (* Proc. Name     : DefineConsole
 (* Function       : 
@@ -406,10 +505,11 @@ BEGIN
    WHILE Length(S) > 0 DO
    BEGIN
       Token := NextToken(S,Delim);
-      IF Token = 'DEVNO' THEN GetDevno(S,Delim,Dev) ELSE
-      IF Token = 'INTNO' THEN GetIntno(S,Delim,2,Int) ELSE
-      IF Token = ''      THEN Err('Bad syntax at '''+Delim+'''')
-                         ELSE Err('Unknown parameter: '+Token);
+      IF Token = 'DEVNO'    THEN GetDevno(S,Delim,Dev) ELSE
+      IF Token = 'INTNO'    THEN GetIntno(S,Delim,2,Int) ELSE
+      IF Token = 'TMXDEVNO' THEN GetTmxDevNo(S,Delim,Dev,Int) ELSE
+      IF Token = ''         THEN Err('Bad syntax at '''+Delim+'''')
+                            ELSE Err('Unknown parameter: '+Token);
    END;
 
    IF Dev < 0 THEN Err('Device no. not defined');
@@ -427,7 +527,26 @@ BEGIN
       
 END; (* DefineConsole *)
 
-(*#CPAGE 20*)
+
+(**********************************************************************)
+(* Func. Name     : GetComStatusLineParam
+(* Function       : 
+(**********************************************************************)
+FUNCTION GetComStatusLineParam (VAR S: STRING; VAR Delim: CHAR): BYTE;
+
+VAR
+   Token: STRING;
+
+BEGIN
+   CheckAss(Delim);
+   Token := NextToken(S,Delim);
+   IF Token = 'CTS' THEN GetComStatusLineParam := CTS ELSE
+   IF Token = 'DSR' THEN GetComStatusLineParam := DSR ELSE
+   IF Token = 'DCD' THEN GetComStatusLineParam := DCD ELSE
+      Err('Bad COM status line name: '+Token);
+END; (* GetComStatusLineParam *)
+
+
 (**********************************************************************)
 (* Proc. Name     : DefineComTerminal
 (* Function       : 
@@ -449,14 +568,18 @@ VAR
    RateNdx : 1..MaxRates;
 
    IoBase,
-   BaudRate: WORD;
+   BaudRate    : WORD;
    Parity,
    StopBits,
-   CharLen : CHAR;
+   CharLen     : CHAR;
    IrqNo,
-   ComNo: BYTE;
-   Dev:  INTEGER;
-   Int:  ARRAY [0..1] OF BYTE;
+   ComNo,
+   ConnectLine,
+   ReadyLine   : BYTE;
+   Dev         : INTEGER;
+   Int         : ARRAY [0..1] OF BYTE;
+   Multi4Id    : Multiport4ID;
+   MultiPortNo : BYTE;
 
    Token: STRING;
    Delim: CHAR;
@@ -467,36 +590,65 @@ VAR
    DevP: ComDevicePtr;
 
 BEGIN
-   Baudrate := 0;
-   CharLen  := '7';
-   Parity   := 'E';
-   StopBits := '1';
-   Int[0]   := 0;
-   Int[1]   := 0;
-   Dev      := -1;
-   ComNo    := 0;
-   IrqNo    := 0;
+   Baudrate    := 0;
+   CharLen     := '7';
+   Parity      := 'E';
+   StopBits    := '1';
+   Int[0]      := 0;
+   Int[1]      := 0;
+   Dev         := -1;
+   ComNo       := 0;
+   IrqNo       := 0;
+   ConnectLine := 0;
+   ReadyLine   := 0;
 
    WHILE Length(S) > 0 DO
    BEGIN
       Token := NextToken(S,Delim);
       IF Token = 'DEVNO' THEN GetDevno(S,Delim,Dev) ELSE
       IF Token = 'INTNO' THEN GetIntno(S,Delim,2,Int) ELSE
+      IF Token = 'TMXDEVNO' THEN GetTmxDevNo(S,Delim,Dev,Int) ELSE
       IF Token = 'COM'   THEN
       BEGIN
          IF ComNo>0 THEN Err('More than one COM parameter on line');
          CheckAss(Delim);
          Token := NextToken(S,Delim);
-         IF NOT (Str2Long(Token,L)) OR (Delim <> ' ') 
-            THEN Err('Error at COM-parameter');
+         IF ((Token='MULTIPORT4H') OR (Token='MULTIPORT4L')) AND
+            (Delim='.') THEN
+         BEGIN  (* Device on multiport card *)
+            IF IrqNo>0 THEN Err('IRQ/Multiport param conflict');
 
-         IF (L<1) OR (L>4)
-            THEN Err('Device number for Com out of range');
+            IF Pos('4H',Token)<>0
+               THEN Multi4Id := HIGH_ADDR
+               ELSE Multi4Id := LOW_ADDR;
 
-         IF ComTable[L] = 0 
-            THEN Err('COM'+Long2Str(L)+' not present in BIOS');
+            IF Multiport4Handlers[Multi4Id]=NIL
+               THEN Err('The Multiport4 handler is not defined');
 
-         ComNo := L;
+            Token := NextToken(S,Delim);
+            IF NOT (Str2Long(Token,L)) OR (Delim <> ' ') 
+               THEN Err('Error at COM-parameter (Multiport)');
+
+            IF (L<1) OR (L>4)
+               THEN Err('Port number for Multiport device out of range');
+
+            IrqNo := (Ord(Multi4Id)+1) SHL 4 + L-1;
+            MultiPortNo := L;
+            ComNo := 99; (* Dummy *)
+         END ELSE
+
+         BEGIN (* Normal COM port *)
+            IF NOT (Str2Long(Token,L)) OR (Delim <> ' ') 
+               THEN Err('Error at COM-parameter');
+
+            IF (L<1) OR (L>4)
+               THEN Err('Device number for Com out of range');
+
+            IF ComTable[L] = 0 
+               THEN Err('COM'+Long2Str(L)+' not present in BIOS');
+
+            ComNo := L;
+         END;
       END ELSE
 
       IF Token = 'MODE'   THEN
@@ -552,10 +704,22 @@ BEGIN
          IF NOT (Str2Long(Token,L)) OR (Delim <> ' ') 
             THEN Err('Error at IRQ-parameter');
 
-         IF NOT (L IN [3,4,5,7])
-            THEN Err('Only IRQ 3,4,5 and 7 is supported');
+         IF NOT (L IN [2,3,4,5,7])
+            THEN Err('Only IRQ 2,3,4,5 and 7 is supported');
 
          IrqNo := L;
+      END ELSE
+
+      IF Token = 'CONNECT' THEN
+      BEGIN
+         IF ConnectLine <> 0 THEN Err('More than one CONNECT parameter on line');
+         ConnectLine := GetComStatusLineParam(S,Delim);
+      END ELSE
+
+      IF Token = 'READY' THEN
+      BEGIN
+         IF ReadyLine <> 0 THEN Err('More than one READY parameter on line');
+         ReadyLine := GetComStatusLineParam(S,Delim);
       END ELSE
 
       IF Token = ''      THEN Err('Bad syntax at '''+Delim+'''')
@@ -565,6 +729,7 @@ BEGIN
    IF Dev < 0 THEN Err('Device no. not defined');
    IF Int[0] = 0 THEN Err('Interrupt not defined');
    IF ComNo = 0 THEN Err('COM port no. not defined');
+   IF (ConnectLine AND ReadyLine) <> 0 THEN Err('CONNECT/READY conflict');
 
    IF IrqNo = 0 THEN
    CASE ComNo OF
@@ -572,7 +737,12 @@ BEGIN
       2,4: IrqNo := 3;
    END;
 
-   DevP := New(ComDevicePtr,Init(Dev,ComTable[ComNo],IrqNo,Int[0],Int[1]));
+   IF IrqNo > 15
+      THEN IoBase := Multiport4AddrMap[Multi4Id,(IrqNo AND $F)+1]
+      ELSE IoBase := ComTable[ComNo];
+
+   DevP := New(ComDevicePtr,Init(Dev,IoBase,IrqNo,Int[0],Int[1],
+               ConnectLine,ReadyLine));
    IF  DevP = NIL
       THEN Err('Could not create COM Terminal, device no. '+Long2Str(Dev));
 
@@ -581,10 +751,17 @@ BEGIN
    IF BaudRate > 0 THEN
       DevP^.MakeLineSettings(DivTable[RateNdx],CharLen,Parity,StopBits);
 
+   IF IrqNo > 15 THEN
+   WITH Multiport4Handlers[Multi4Id]^ DO
+   BEGIN
+      IF PortUsed(MultiPortNo)
+         THEN Err('Port defined multiple times');
+      InsHook(DevP^);
+   END;
+      
 END; (* DefineComTerminal *)
 
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : DefineClock
 (* Function       : 
@@ -620,7 +797,6 @@ BEGIN
       
 END; (* DefineClock *)
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : DefineDFC403
 (* Function       : 
@@ -656,7 +832,6 @@ BEGIN
 
 END; (* DefineDFC403 *)
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : DefineRC4819
 (* Function       : 
@@ -764,7 +939,6 @@ BEGIN
 
 END; (* DefineRC4819 *)
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : DefineRC433x
 (* Function       : 
@@ -835,7 +1009,71 @@ BEGIN
 
 END; (* DefineRC433x *)
 
-(*#CPAGE 20*)
+
+(**********************************************************************)
+(* Proc. Name     : GetFilePar
+(* Function       : 
+(**********************************************************************)
+PROCEDURE GetFilePar (VAR S: STRING; Delim: CHAR; VAR Name: STRING);
+
+BEGIN
+   IF Name<>'' THEN Err('More than one FILE parameter on line');
+   CheckAss(Delim);
+   Name := NextToken(S,Delim);
+   IF Delim<>' ' THEN Err('Error at FILE');
+END; (* GetFilePar *)
+
+
+(**********************************************************************)
+(* Proc. Name     : GetTimeoutPar
+(* Function       : 
+(**********************************************************************)
+PROCEDURE GetTimeoutPar (VAR S: STRING; Delim: CHAR; VAR Timo: INTEGER);
+
+VAR
+   Token: STRING;
+   L: LONGINT;
+
+BEGIN
+   IF Timo>=0 THEN Err('More than one TIMEOUT parameter on line');
+   CheckAss(Delim);
+   Token := NextToken(S,Delim);
+   IF NOT (Str2Long(Token,L)) OR (Delim <> ' ') 
+      THEN Err('Error at TIMEOUT');
+
+   IF (L<0) OR (L>9999)
+      THEN Err('Timeout out of range');
+
+   Timo := L;
+
+END; (* GetTimeoutPar *)
+
+
+(**********************************************************************)
+(* Proc. Name     : GetDosModePar
+(* Function       : 
+(**********************************************************************)
+PROCEDURE GetDosModePar (VAR S: STRING; Delim: CHAR; VAR Conv: INTEGER);
+
+VAR
+   Token: STRING;
+   L: LONGINT;
+
+BEGIN
+   IF Conv>=0 THEN Err('More than one MODE parameter on line');
+   CheckAss(Delim);
+   Token := NextToken(S,Delim);
+   IF NOT (Str2Long(Token,L)) OR (Delim <> ' ') 
+      THEN Err('Error at MODE');
+
+   IF (L<1) OR (L>2)
+      THEN Err('MODE out of range');
+
+   Conv := L;
+
+END; (* GetDosModePar *)
+
+
 (**********************************************************************)
 (* Proc. Name     : DefineDos
 (* Function       : 
@@ -849,30 +1087,44 @@ VAR
    Token: STRING;
    Delim: CHAR;
    RdPtr: DosDevicePtr;
+   AutoName: STRING;
+   TimeOut:  INTEGER;
+   Conv:     INTEGER;
 
 BEGIN
-   Int[0] := 0;
-   Dev    := -1;
+   Int[0]   := 0;
+   Dev      := -1;
+   AutoName := '';
+   TimeOut  := -1;
+   Conv     := -1;
 
    WHILE Length(S) > 0 DO
    BEGIN
       Token := NextToken(S,Delim);
       IF Token = 'DEVNO' THEN GetDevno(S,Delim,Dev) ELSE
       IF Token = 'INTNO' THEN GetIntno(S,Delim,1,Int) ELSE
+      IF Token = 'FILE'  THEN GetFilePar(S,Delim,AutoName) ELSE
+      IF Token = 'TIMEOUT' THEN GetTimeoutPar(S,Delim,TimeOut) ELSE
+      IF Token = 'MODE'  THEN GetDosModePar(S,Delim,Conv) ELSE
       IF Token = ''      THEN Err('Bad syntax at '''+Delim+'''')
                          ELSE Err('Unknown parameter: '+Token);
    END;
 
    IF Dev < 0 THEN Err('Device no. not defined');
    IF Int[0] = 0 THEN Err('Interrupt not defined');
-   RdPtr := New(DosDevicePtr,Init(Dev,Int[0]));
+   IF ((TimeOut>=0) OR (Conv>=0)) AND (AutoName='')
+      THEN Err('TIMEOUT and MODE only with FILE');
+
+   IF TimeOut<0 THEN Timeout := 0;
+   IF Conv < 0 THEN Conv := 1;  
+
+   RdPtr := New(DosDevicePtr,Init(Dev,Int[0],AutoName,Conv,TimeOut));
    IF RdPtr = NIL
       THEN Err('Could not create Dos-device, device no. '+Long2Str(Dev));
    
 END; (* DefineDos *)
 
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : DefineDevice
 (* Function       : 
@@ -887,22 +1139,24 @@ BEGIN
    Token := NextToken(S,Delim);
    IF Delim <> ' ' THEN Err('Misplaced '''+Delim+'''');
    
-   IF Token = 'READER'     THEN DefineReader(S) ELSE
-   IF Token = 'PUNCH'      THEN DefinePunch(S) ELSE
-   IF Token = 'CONSOLE'    THEN DefineConsole(S,FALSE) ELSE
-   IF Token = 'COMTERM'    THEN DefineComTerminal(S) ELSE
-   IF Token = 'RC851'      THEN DefineConsole(S,TRUE) ELSE
-   IF Token = 'CLOCK'      THEN DefineClock(S) ELSE
-   IF Token = 'DFC403'     THEN DefineDFC403(S) ELSE
-   IF Token = 'RC4819'     THEN DefineRC4819(S,FALSE) ELSE
-   IF Token = 'RC433X'     THEN DefineRC433X(S,FALSE) ELSE
-   IF Token = 'RC433XRAM'  THEN DefineRC433X(S,TRUE) ELSE
-   IF Token = 'RC4819RAM'  THEN DefineRC4819(S,TRUE) ELSE
-   IF Token = 'DOS'        THEN DefineDos(S) ELSE
+   IF Token = 'READER'      THEN DefineReader(S) ELSE
+   IF Token = 'PUNCH'       THEN DefinePunch(S) ELSE
+   IF Token = 'MULTIPORT4H' THEN DefineMultiport4(S,HIGH_ADDR) ELSE
+   IF Token = 'MULTIPORT4L' THEN DefineMultiport4(S,LOW_ADDR) ELSE
+   IF Token = 'EXPANDER'    THEN DefineInterruptExpander(S) ELSE
+   IF Token = 'CONSOLE'     THEN DefineConsole(S,FALSE) ELSE
+   IF Token = 'COMTERM'     THEN DefineComTerminal(S) ELSE
+   IF Token = 'RC851'       THEN DefineConsole(S,TRUE) ELSE
+   IF Token = 'CLOCK'       THEN DefineClock(S) ELSE
+   IF Token = 'DFC403'      THEN DefineDFC403(S) ELSE
+   IF Token = 'RC4819'      THEN DefineRC4819(S,FALSE) ELSE
+   IF Token = 'RC433X'      THEN DefineRC433X(S,FALSE) ELSE
+   IF Token = 'RC433XRAM'   THEN DefineRC433X(S,TRUE) ELSE
+   IF Token = 'RC4819RAM'   THEN DefineRC4819(S,TRUE) ELSE
+   IF Token = 'DOS'         THEN DefineDos(S) ELSE
       Err('Unkown device kind: '+Token);
 END; (* DefineDevice *)
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : DefineCoresize
 (* Function       : 
@@ -943,7 +1197,6 @@ END; (* DefineCoresize *)
 
 
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : MakeConfig
 (* Function       : 
@@ -988,7 +1241,13 @@ BEGIN
       IF Token = 'CORESIZE' THEN DefineCoresize(S) ELSE
          Err('Unknown keyword: '+Token);
    END;
+
    Close(F);
+   CurrLine := '';
+   IF ScreenTab[0]=NIL THEN
+      Err('At least one local console/terminal device must be defined in '+
+           ConfigName);
+   ConsPostInit;
 END; (* MakeConfig *)
 
 
@@ -998,7 +1257,6 @@ END; (* MakeConfig *)
 (*****                      Online config part
 (*****
 (**********************************************************************)
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : ConfigMenu
 (* Function       : 
@@ -1013,7 +1271,6 @@ END; (* ConfigMenu *)
 
 
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (*****              UNIT ENTRY AND EXIT PROCEDURES
 (**********************************************************************)
@@ -1022,7 +1279,6 @@ VAR
 
    ExitSave  : pointer;
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : UnitExit
 (* Function       : Exit procedure.
@@ -1036,7 +1292,6 @@ END; (* UnitExit *)
 
 
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : UnitEntry
 (* Function       : Entry procedure for unit.

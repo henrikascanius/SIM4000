@@ -22,6 +22,7 @@ USES
    OpCrt,
    OpColor,
    OpString,
+   OpDate,
    Util,
    Intr,
    Config,
@@ -37,7 +38,6 @@ USES
 
 {$I COLOR.DEF}
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : ShowHelp
 (* Function       : 
@@ -81,7 +81,7 @@ VAR I: INTEGER;
 
 BEGIN
    x := 1.0; (* Force test for 8087 *)
-   Test8086 := 0; (* Too many bugs! *)
+   Test8086 := 0;  (* Too many bugs! *)
 
    FOR I := 1 TO ParamCount DO
       IF ParamStr(I) = '/?' THEN 
@@ -147,6 +147,18 @@ BEGIN
    END;
 
    IF MonitorName <> '' THEN AutoloadMonitor(MonitorName,SetInitSwitch);
+
+   IF AutoAutoload OR (Length(MonitorName)>0) THEN
+   WITH ScreenTab[0]^ DO
+   BEGIN
+      Activate;
+      FastWrite('RC4000 SIMULATOR AUTOLOAD        '+
+                TodayString('www dd nnn yyyy')+
+                '  '+CurrentTimeString('hh:mm'),Row,Col,UserTextAttr);
+      Inc(Row);
+      Deactivate;
+   END;
+
    WS.Process;
    WS.Done;
 
@@ -156,6 +168,9 @@ BEGIN
 
    IF CrtBorderOn THEN SetCrtBorder(UserTextAttr);
    ClrScr;
+   NormalCursor;
+   WriteLn('RC4000 Simulator shut down at ',TodayString('www dd nnn yyyy'),
+           '  ',CurrentTimeString('hh:mm'));
 
 END; (* Main *)
 

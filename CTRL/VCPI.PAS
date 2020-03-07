@@ -1,5 +1,3 @@
-(*#LEFT 6*)(*#TITLE ""*)
-
 (**********************************************************************)
 (* Unit name      : VCPI.PAS
 (* Pascal Version : Borland Pascal 7.0
@@ -185,7 +183,6 @@ FUNCTION  CallProtectedMode(PMPar: HugePtr): WORD ; EXTERNAL;
 
 {$L VCPI.OBJ}
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : InitVCPI
 (* Function       : Create page tables etc.
@@ -266,7 +263,6 @@ BEGIN
    END;
 END; (* InitVCPI *)
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : Allocate4K
 (* Function       : Allocate a 4K-page and insert in page table.
@@ -301,7 +297,6 @@ END; (* Allocate4K *)
 
 
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Func. Name     : CreateCore
 (* Function       : Reserves RC8000 core store.
@@ -343,7 +338,6 @@ BEGIN
 
 END; (* CreateCore *)
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : AllocateXtraSegment
 (* Function       : Allocate an amount of phys. memory and return 
@@ -385,7 +379,6 @@ END; (* AllocateXtraSegment *)
 
 
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : InitDescrs
 (* Function       : Init various descriptors etc.
@@ -465,7 +458,6 @@ BEGIN
 
 END; (* InitDescrs *)
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : ReleaseMemory
 (* Function       : Free memory used for RC8000 core and code.
@@ -482,7 +474,6 @@ BEGIN
 END; (* ReleaseMemory *)
 
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (*****              UNIT ENTRY AND EXIT PROCEDURES
 (**********************************************************************)
@@ -491,7 +482,6 @@ VAR
 
    ExitSave  : pointer;
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : UnitExit
 (* Function       : Exit procedure.
@@ -511,7 +501,6 @@ END; (* UnitExit *)
 
 
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : UnitEntry
 (* Function       : Entry procedure for unit.

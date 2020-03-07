@@ -1,5 +1,3 @@
-(*#LEFT 6*)(*#TITLE ""*)
-
 (**********************************************************************)
 (* Unit name      : INTF.PAS
 (* Pascal Version : Borland Pascal 7.0
@@ -55,22 +53,24 @@ TYPE
                      IM          : LONGINT;
                      IR          : LONGINT;
                      BreakPoint  : LONGINT;
+                     ClockSense  : LONGINT;
+                     ClockCntP   : FWORD;
                      Ex23        : 0..1;
                      Ex22        : 0..1;
-                     Ex21        : 0..4;
                      IntEn       : BOOLEAN;
                      ResetKey    : BOOLEAN;
                      AutoloadKey : BOOLEAN;
                      Step        : BOOLEAN;
                      Trace       : BOOLEAN;
                      Stop        : BOOLEAN;
+                     Halt        : BOOLEAN;
                      ResetSys    : BOOLEAN;
                      ResetMode   : BOOLEAN;
                      Running     : BOOLEAN;
-                     ClockSense  : LONGINT;
-                     ClockCntP   : FWORD;
                      FullAccuracy: BOOLEAN;
                      NextScreen  : BYTE;  (* Virt. screen to activate *)
+                     Spare       : BYTE;
+                     Spare2      : WORD;
                      SrvcParam   : SrvcRec;
                   END;
 
@@ -89,23 +89,25 @@ CONST
                      IM          : $80000000;
                      IR          : 0;
                      BreakPoint  : -1;
+                     ClockSense  : -1;
+                     ClockCntP   : (Offset: 0;
+                                    Selector: 0);
                      Ex23        : 0;
                      Ex22        : 0;
-                     Ex21        : 0;
                      IntEn       : FALSE;
                      ResetKey    : FALSE;
                      AutoloadKey : FALSE;
                      Step        : FALSE;
                      Trace       : FALSE;
                      Stop        : FALSE;
+                     Halt        : FALSE;
                      ResetSys    : FALSE;
                      ResetMode   : TRUE;
                      Running     : FALSE;
-                     ClockSense  : -1;
-                     ClockCntP   : (Offset: 0;
-                                    Selector: 0);
                      FullAccuracy: TRUE;
-                     NextScreen  : $FF
+                     NextScreen  : $FF;
+                     Spare       : 0;
+                     Spare2      : 0
                     );
 
 
@@ -162,7 +164,6 @@ PROCEDURE _SetBreakSeg;EXTERNAL;
 
 
 {$F+} 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : CallProtected
 (* Function       : 
@@ -181,7 +182,6 @@ BEGIN
 END; (* CallProtected *)
 
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : InitIDT
 (* Function       : Init the Interrupt Descriptor Table
@@ -201,7 +201,6 @@ BEGIN
 
 END; (* InitIDT *)
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : Reset8000
 (* Function       : 
@@ -221,7 +220,6 @@ BEGIN
    END;
 END; (* Reset8000 *)
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : SetBreakSeg
 (* Function       : Fills the break segment with the break offset
@@ -232,7 +230,6 @@ BEGIN
    CallProtected(@_SetBreakSeg);
 END; (* SetBreakSeg *)
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : Run8000
 (* Function       : Start (resume) RC8000.
@@ -266,7 +263,6 @@ BEGIN
    END;
 END; (* Run8000 *)
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : FromCore
 (* Function       : Copy a block from RC8000 core to V86 memory
@@ -287,7 +283,6 @@ BEGIN
 
 END; (* FromCore *)
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : ToCore
 (* Function       : Copy a block from V86 memory to RC8000 core
@@ -308,7 +303,6 @@ BEGIN
 
 END; (* ToCore *)
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : FromCoreP
 (* Function       : Copy a block from RC8000 core to V86 memory
@@ -332,7 +326,6 @@ BEGIN
 
 END; (* FromCoreP *)
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : ToCoreP
 (* Function       : Copy a block from V86 memory to RC8000 core
@@ -355,7 +348,6 @@ BEGIN
    CallProtected(@_ToCoreP);
 
 END; (* ToCoreP *)
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : FromCorePToXtra
 (* Function       : Copy a block from RC8000 core to V86 memory
@@ -379,7 +371,6 @@ BEGIN
 
 END; (* FromCorePToXtra *)
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : ToCorePFromXtra
 (* Function       : Copy a block from V86 memory to RC8000 core
@@ -402,7 +393,6 @@ BEGIN
    CallProtected(@_ToCoreP);
 
 END; (* ToCorePFromXtra *)
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : FromCoreTxt
 (* Function       : Copy a block from RC8000 core to V86 memory
@@ -424,7 +414,6 @@ BEGIN
 
 END; (* FromCoreTxt *)
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : ToCoreTxt
 (* Function       : Copy a block from V86 memory to RC8000 core
@@ -446,7 +435,6 @@ BEGIN
 
 END; (* ToCoreTxt *)
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : FromCode
 (* Function       : Copy a block from RC8000 sim. code seg to V86 memory
@@ -467,7 +455,6 @@ BEGIN
 
 END; (* FromCode *)
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : ToCode
 (* Function       : Copy a block from V86 memory to RC8000 sim. code seg.
@@ -487,7 +474,6 @@ BEGIN
    CallProtected(@_ToCode);
 
 END; (* ToCode *)
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : ResetCore
 (* Function       : 
@@ -499,7 +485,6 @@ BEGIN
 END; (* ResetCore *)
 
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (*****              UNIT ENTRY AND EXIT PROCEDURES
 (**********************************************************************)
@@ -508,7 +493,6 @@ VAR
 
    ExitSave  : pointer;
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : UnitExit
 (* Function       : Exit procedure.
@@ -522,7 +506,6 @@ END; (* UnitExit *)
 
 
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : UnitEntry
 (* Function       : Entry procedure for unit.

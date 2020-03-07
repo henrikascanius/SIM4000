@@ -1,5 +1,3 @@
-(*#LEFT 6*)(*#TITLE ""*)
-
 (**********************************************************************)
 (* Unit name      : SCRN.PAS
 (* Pascal Version : Borland Pascal 7.0
@@ -68,7 +66,8 @@ TYPE
 
 
 CONST
-   CurScreen: ScreenPtr = NIL;
+   CurScreen    : ScreenPtr = NIL;
+   CurRCScreenNo: BYTE = 0;
 
 VAR
    CrtBorderOn : BOOLEAN; (* True if overscan color <> 0 at prog. entry *)
@@ -107,7 +106,6 @@ CONST
 VAR
    ConsLog: TEXT;
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : InitUserTextAttr
 (* Function       : Write a char thru DOS and get attribute used.
@@ -149,7 +147,6 @@ BEGIN
 END; (* InitUserTextAttr *)
 
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Func. Name     : CurrentVideoMode
 (* Function       : 
@@ -161,7 +158,6 @@ BEGIN
    CurrentVideoMode := GetCrtMode + Ord(Font8x8Selected)*Font8x8;
 END; (* CurrentVideoMode *)
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : SetCrtBorder
 (* Function       : Stolen from OPCRT and modified (checks for mode etc.
@@ -200,7 +196,6 @@ BEGIN
 END; (* SetCrtBorder *)
 
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : Screen.Init
 (* Function       : 
@@ -227,7 +222,6 @@ BEGIN
 
 END; (* Screen.Init *)
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : Screen.Done
 (* Function       : 
@@ -238,7 +232,6 @@ BEGIN
    ScreenTab[ScreenNo] := NIL;
 END; (* Screen.Done *)
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : ToPhysScreen
 (* Function       : Makes the screen the one active on the CRT
@@ -271,7 +264,6 @@ BEGIN
    CurScreen := @Self;
 END; (* ToPhysScreen *)
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : FromPhysScreen
 (* Function       : Puts the screen in background, i.e. not on CRT
@@ -289,7 +281,6 @@ BEGIN
    CurScreen := NIL;
 END; (* FromPhysScreen *)
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : ConsScreen.Init
 (* Function       : 
@@ -312,7 +303,6 @@ END; (* ConsScreen.Init *)
 
 
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : ConsScreen.OutChar
 (* Function       : Writes a char to ConsScreen screen.
@@ -377,7 +367,6 @@ BEGIN
 END; (* ConsScreen.OutChar *)
 
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (*****              UNIT ENTRY AND EXIT PROCEDURES
 (**********************************************************************)
@@ -386,7 +375,6 @@ VAR
 
    ExitSave  : pointer;
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : UnitExit
 (* Function       : Exit procedure.
@@ -406,7 +394,6 @@ END; (* UnitExit *)
 
 
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : UnitEntry
 (* Function       : Entry procedure for unit.

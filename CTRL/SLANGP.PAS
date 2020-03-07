@@ -1,5 +1,3 @@
-(*#LEFT 6*)(*#TITLE ""*)
-
 (**********************************************************************)
 (* Unit name      : SLANGP.PAS
 (* Pascal Version : Borland Pascal 7.0
@@ -72,7 +70,7 @@ CONST
        Ord('d') SHL 8 + Ord('l'),    Ord('d') SHL 8 + Ord('s'),
        Ord('a') SHL 8 + Ord('a'),    Ord('s') SHL 8 + Ord('s'),
        Ord('5') SHL 8 + Ord('8'),    Ord('5') SHL 8 + Ord('9'),
-       Ord('6') SHL 8 + Ord('0'),    Ord('6') SHL 8 + Ord('1'),
+       Ord('6') SHL 8 + Ord('0'),    Ord('i') SHL 8 + Ord('x'),
        Ord('6') SHL 8 + Ord('2'),    Ord('6') SHL 8 + Ord('3'),
 
       (* Alternative names *)
@@ -111,7 +109,6 @@ CONST
 
       );
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (*Func. Name     : SlangError
 (* Function       : Translates error code to text
@@ -146,7 +143,6 @@ END; (* SlangError *)
 
 
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Func. Name     : SlangNumber
 (* Function       : 
@@ -226,7 +222,6 @@ END; (* SlangNumber *)
 
 
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Func. Name     : Slang
 (* Function       : Translate a text line to machine code
@@ -351,7 +346,6 @@ BEGIN
 
 END; (* Slang *)
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Func. Name     : UnSlang
 (* Function       : Disassembles a machine word into SLANG code
@@ -414,7 +408,6 @@ END; (* UnSlang *)
 
 
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (*****              UNIT ENTRY AND EXIT PROCEDURES
 (**********************************************************************)
@@ -423,7 +416,6 @@ VAR
 
    ExitSave  : pointer;
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : UnitExit
 (* Function       : Exit procedure.
@@ -437,7 +429,6 @@ END; (* UnitExit *)
 
 
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : UnitEntry
 (* Function       : Entry procedure for unit.

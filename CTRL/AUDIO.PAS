@@ -1,5 +1,3 @@
-(*#LEFT 6*)(*#TITLE ""*)
-
 (**********************************************************************)
 (* Unit name      : AUDIO.PAS
 (* Pascal Version : Borland Pascal 7.0
@@ -53,7 +51,6 @@ USES
 CONST
    BeepConst = 1193;                   (*  1 193 180 / 1000 Hz *)
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : SoundOn
 (* Function       : 
@@ -70,7 +67,6 @@ BEGIN
    PopF;
 END; (* SoundOn *)
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : SoundOff
 (* Function       : 
@@ -85,7 +81,6 @@ BEGIN
 END; (* SoundOff *)
 
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : BeeperObj.Init
 (* Function       : 
@@ -98,7 +93,6 @@ BEGIN
    _On := FALSE;
 END; (* BeeperObj.Init *)
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : BeeperObj.TimeoutAction
 (* Function       : 
@@ -125,7 +119,6 @@ BEGIN
    PopF;
 END; (* BeeperObj.TimeoutAction *)
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : BeeperObj.Beep
 (* Function       : 
@@ -140,7 +133,6 @@ BEGIN
    PopF;
 END; (* BeeperObj.Beep *)
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : BeeperObj.Kill
 (* Function       : 
@@ -158,7 +150,6 @@ BEGIN
 END; (* BeeperObj.Kill *)
 
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (*****              UNIT ENTRY AND EXIT PROCEDURES
 (**********************************************************************)
@@ -167,7 +158,6 @@ VAR
 
    ExitSave  : pointer;
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : UnitExit
 (* Function       : Exit procedure.
@@ -181,7 +171,6 @@ END; (* UnitExit *)
 
 
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : UnitEntry
 (* Function       : Entry procedure for unit.

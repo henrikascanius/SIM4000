@@ -1,5 +1,3 @@
-(*#LEFT 6*)(*#TITLE ""*)
-
 (**********************************************************************)
 (* Unit name      : WIN.PAS
 (* Pascal Version : Borland Pascal 7.0
@@ -213,7 +211,6 @@ VAR
    CtrlScreen:  Screen;
 
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Func. Name     : ChrFunc
 (* Function       : Conv. byte to ISO-char
@@ -233,7 +230,6 @@ BEGIN
    END;
 END; (* ChrFunc *)
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : WinSys.Init
 (* Function       : 
@@ -246,7 +242,6 @@ BEGIN
 END; (* WinSys.Init *)
 
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : WinSys.Process
 (* Function       : Run the window system, handle walk-around betw. windows
@@ -257,6 +252,9 @@ BEGIN
    IF CurrentWin = NIL THEN CurrentWin := DoubleListPtr(@Self)^.Head;
    IF AutoAutoload THEN AutoloadButton ELSE
    IF AutoStart THEN StartButton;
+
+   IF State8000.Halt THEN Exit;
+
    REPEAT
       WITH Win8000Ptr(CurrentWin)^ DO
       BEGIN
@@ -300,11 +298,10 @@ BEGIN
             ELSE ;
          END;
       END;
-   UNTIL _Command IN [ccExit];
+   UNTIL (_Command IN [ccExit]) OR (State8000.Halt);
 
 END; (* WinSys.Process *)
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Func. Name     : WinSys.GetLastCommand
 (* Function       : Returns the command that caused Process to exit
@@ -315,7 +312,6 @@ BEGIN
    GetLastCommand := _Command;
 END; (* WinSys.GetLastCommand *)
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : WinSys.DrawAll
 (* Function       : Draws all windows in system
@@ -345,7 +341,6 @@ BEGIN
 
 END; (* WinSys.DrawAll *)
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : BreakSound
 (* Function       : Makes a sound...
@@ -364,7 +359,6 @@ BEGIN
 END; (* BreakSound *)
 
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : WinSys.Start8000
 (* Function       : Run/Step/Trace handling
@@ -380,7 +374,7 @@ BEGIN
    WITH State8000 DO
    BEGIN
       SwopCrt := NOT Trace;
-      IF SwopCrt THEN ScreenTab[0]^.ToPhysScreen;
+      IF SwopCrt THEN ScreenTab[CurRCScreenNo]^.ToPhysScreen;
       Stop := FALSE;
       Run8000;
       IF SwopCrt THEN ScreenTab[MaxScreen]^.ToPhysScreen;
@@ -393,7 +387,6 @@ BEGIN
    Win8000Ptr(CurrentWin)^.AdjustToIC;
 END; (* WinSys.Start8000 *)
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : WinSys.ResetButton
 (* Function       : 
@@ -405,7 +398,6 @@ BEGIN
 END; (* WinSys.ResetButton *)
 
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : WinSys.StartButton
 (* Function       : 
@@ -420,7 +412,6 @@ BEGIN
    Start8000;
 END; (* WinSys.StartButton *)
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : WinSys.AutoloadButton
 (* Function       : 
@@ -450,7 +441,6 @@ BEGIN
    END;
 END; (* WinSys.AutoloadButton *)
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : Win8000.Init
 (* Function       : 
@@ -482,7 +472,6 @@ BEGIN
 
 END; (* Win8000.Init *)
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Func. Name     : Win8000.IsCurrent
 (* Function       : TRUE if this window is current in the WinSys it
@@ -495,7 +484,6 @@ BEGIN
    IsCurrent := WSPtr^.CurrentWin = @Self;
 END; (* Win8000.IsCurrent *)
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : Win8000.Process
 (* Function       : 
@@ -506,7 +494,6 @@ BEGIN
 END; (* Win8000.Process *)
 
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : Win8000.Draw;
 (* Function       : 
@@ -518,7 +505,6 @@ END; (* Win8000.Draw; *)
 
 
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : Win8000.Edit
 (* Function       : 
@@ -529,7 +515,6 @@ BEGIN
    Abstract;
 END; (* Win8000.Edit *)
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : Win8000.ZoomToggle
 (* Function       : Does nothing unless overwritten
@@ -538,7 +523,6 @@ PROCEDURE Win8000.ZoomToggle;
 BEGIN
 END; (* Win8000.ZoomToggle *)
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : Win8000.AdjustToIC
 (* Function       : Does nothing unless overwritten
@@ -548,7 +532,6 @@ BEGIN
 END; (* Win8000.AdjustToIC *)
 
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : Win8000.Done
 (* Function       : 
@@ -562,7 +545,6 @@ BEGIN
 END; (* Win8000.Done *)
 
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : CoreWin.Init
 (* Function       : 
@@ -576,7 +558,6 @@ BEGIN
    AdjustToIC;
 END; (* CoreWin.Init *)
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : CoreWin.AdjustRefAddr
 (* Function       : Puts RefAddr within range
@@ -589,7 +570,6 @@ BEGIN
       THEN RefAddr := CoreSize-Height-Height;
 END; (* CoreWin.AdjustRefAddr *)
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Func. Name     : CoreWin.GetJumpAddr
 (* Function       : Get response to Alt-G
@@ -625,7 +605,6 @@ END; (* CoreWin.GetJumpAddr *)
 
 
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : CoreWin.Process
 (* Function       : 
@@ -753,7 +732,6 @@ BEGIN
       Draw;
    UNTIL Exitos;
 END; (* CoreWin.Process *)
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Func. Name     : ToBin
 (* Function       : Returns 24-char 01-string
@@ -776,7 +754,6 @@ BEGIN
    ToBin := S;
 END; (* ToBin *)
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : CoreFormat
 (* Function       : 
@@ -819,7 +796,6 @@ END; (* CoreFormat *)
 
 
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : CoreWin.Draw
 (* Function       : Draws contents.
@@ -872,7 +848,6 @@ BEGIN
 
 END; (* CoreWin.Draw *)
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : CoreWin.Edit
 (* Function       : Edits a word in core
@@ -926,7 +901,6 @@ BEGIN
    END;
 
 END; (* CoreWin.Edit *)
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : CoreWin.ZoomToggle
 (* Function       : Zoom/unzoom core window
@@ -963,7 +937,6 @@ BEGIN
    VS.Done;
 END; (* CoreWin.ZoomToggle *)
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : CoreWin.AdjustToIC
 (* Function       : 
@@ -990,7 +963,6 @@ BEGIN
 END; (* CoreWin.AdjustToIC *)
 
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : WRegsWin.Process
 (* Function       : Edits a reg. value
@@ -1037,7 +1009,6 @@ BEGIN
 
 END; (* WRegsWin.Process *)
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : WRegFormat
 (* Function       : 
@@ -1057,7 +1028,6 @@ BEGIN
    S := S + LeftPad(Long2Str(Cont DIV 256),9) + ' ' + ToBin(Cont);
 END; (* WRegFormat *)
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : WRegsWin.Draw
 (* Function       : 
@@ -1088,7 +1058,6 @@ BEGIN
 
 END; (* WRegsWin.Draw *)
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : WRegsWin.Edit
 (* Function       : Edits a word in WRegs
@@ -1132,7 +1101,6 @@ BEGIN
 
 END; (* WRegsWin.Edit *)
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : IRegsWin.Process
 (* Function       : Edits a reg. value
@@ -1179,7 +1147,6 @@ BEGIN
 
 END; (* IRegsWin.Process *)
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : IRegsWin.Draw
 (* Function       : 
@@ -1215,9 +1182,6 @@ BEGIN
          2: S := 'IR:  ' + ToBin(IR);
          3: BEGIN
                S := 'EX:  ';
-               IF Ex21 = 4
-                  THEN S := S + '1'
-                  ELSE S := S + '0';
                IF Ex22 = 1
                   THEN S := S + '1'
                   ELSE S := S + '0';
@@ -1245,7 +1209,6 @@ BEGIN
 
 END; (* IRegsWin.Draw *)
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : IRegsWin.Edit
 (* Function       : Edits a word in IRegs
@@ -1276,7 +1239,7 @@ BEGIN
          0: S := Long2Str(IC SHL 1);
          1: S := '2.'+ToBin(IM);
          2: S := '2.'+ToBin(IR);
-         3: S := '2.'+Chr((Ex21 SHR 2)+48) + Chr(Ex22+48) + Chr(Ex23+48);
+         3: S := '2.'+Chr(Ex22+48) + Chr(Ex23+48);
       END;
 
       X := 4;
@@ -1295,12 +1258,11 @@ BEGIN
             1: IM := (Buf SHL 8) OR $80000000;
             2: IR := Buf SHL 8;
             3: BEGIN
-                  Ok := (Buf SHR 3) = 0;
+                  Ok := (Buf SHR 2) = 0;
                   IF Ok THEN
                   BEGIN
                      Ex23 := Buf AND 1;
                      Ex22 := (Buf AND 2) SHR 1;
-                     Ex21 := (Buf AND 4);
                   END ELSE
                      IF PopUpError('Out of range',0,Buf,
                                    'Press any key') = '' THEN;
@@ -1314,7 +1276,6 @@ BEGIN
 END; (* IRegsWin.Edit *)
 
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : InitWindows
 (* Function       : Init the "debug" windows
@@ -1370,7 +1331,6 @@ END; (* InitWindows *)
 
 
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (*****              UNIT ENTRY AND EXIT PROCEDURES
 (**********************************************************************)
@@ -1379,7 +1339,6 @@ VAR
 
    ExitSave  : pointer;
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : UnitExit
 (* Function       : Exit procedure.
@@ -1393,7 +1352,6 @@ END; (* UnitExit *)
 
 
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : UnitEntry
 (* Function       : Entry procedure for unit.

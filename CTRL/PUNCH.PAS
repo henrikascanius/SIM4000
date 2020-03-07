@@ -1,5 +1,3 @@
-(*#LEFT 6*)(*#TITLE ""*)
-
 (**********************************************************************)
 (* Unit name      : PUNCH.PAS
 (* Pascal Version : Borland Pascal 7.0
@@ -187,7 +185,6 @@ BEGIN
 END; (* InitEntryScreen *)
    
    
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : PunchDevice.Init
 (* Function       : 
@@ -206,7 +203,6 @@ BEGIN
 
 END; (* PunchDevice.Init *)
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : PunchDevice.Done
 (* Function       : 
@@ -223,7 +219,6 @@ BEGIN
    INHERITED Done;
 END; (* PunchDevice.Done *)
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : PunchDevice.Sense
 (* Function       : 
@@ -241,7 +236,6 @@ BEGIN
    END;
 END; (* PunchDevice.Sense *)
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : PunchDevice.Control
 (* Function       : 
@@ -253,7 +247,6 @@ BEGIN
    State8000.Ex23 := 0;
 END; (* PunchDevice.Control *)
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : PunchDevice.Rd
 (* Function       : 
@@ -265,7 +258,6 @@ BEGIN
 END; (* PunchDevice.Rd *)
 
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : PunchDevice.Wr
 (* Function       : 
@@ -334,7 +326,6 @@ BEGIN
 
 END; (* PunchDevice.Wr *)
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Func. Name     : PunchDevice.DeviceID
 (* Function       : 
@@ -346,7 +337,6 @@ BEGIN
 END; (* PunchDevice.DeviceID *)
 
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : PunchDevice.MountTape
 (* Function       : 
@@ -363,7 +353,6 @@ BEGIN
    BufGot := 0;
 END; (* PunchDevice.MountTape *)
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : PunchDevice.Configure
 (* Function       : 
@@ -380,7 +369,6 @@ BEGIN
    ES.Done;
 END; (* PunchDevice.Configure *)
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : PunchDevice.FlushBuffer
 (* Function       : 
@@ -406,7 +394,6 @@ BEGIN
 END; (* PunchDevice.FlushBuffer *)
 
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (*****              UNIT ENTRY AND EXIT PROCEDURES
 (**********************************************************************)
@@ -414,7 +401,6 @@ END; (* PunchDevice.FlushBuffer *)
 VAR
    ExitSave  : pointer;
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : UnitExit
 (* Function       : Exit procedure.
@@ -426,7 +412,6 @@ BEGIN
 END; (* UnitExit *)
 
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : UnitEntry
 (* Function       : Entry procedure for unit.

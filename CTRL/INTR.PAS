@@ -1,5 +1,3 @@
-(*#LEFT 6*)(*#TITLE ""*)
-
 (**********************************************************************)
 (* Unit name      : INTR.PAS
 (* Pascal Version : Borland Pascal 7.0
@@ -138,7 +136,6 @@ VAR
    KeybStart:WORD ABSOLUTE $40:$80;
    KeybEnd:  WORD ABSOLUTE $40:$82;
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Func. Name     : AllocateIntHandle
 (* Function       : Return an OPINT handle.
@@ -160,7 +157,6 @@ END; (* AllocateIntHandle *)
 
 {$S-}
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : IntrHook.Init
 (* Function       : 
@@ -170,7 +166,6 @@ BEGIN
    INHERITED Init;
 END; (* IntrHook.Init *)
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : IntrHook.IntrAction
 (* Function       : 
@@ -181,7 +176,6 @@ BEGIN
    Abstract;
 END; (* IntrHook.IntrAction *)
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : IntrHandler.Init
 (* Function       : 
@@ -192,7 +186,6 @@ BEGIN
    HookList.Init;
 END; (* IntrHandler.Init *)
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : InsHook
 (* Function       : 
@@ -203,7 +196,6 @@ BEGIN
    HookList.Append(@Hook);
 END; (* InsHook *)
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : IntrHandler.RemHook
 (* Function       : 
@@ -214,7 +206,6 @@ BEGIN
    HookList.Remove(@Hook);
 END; (* IntrHandler.RemHook *)
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : IntrHandler.DoHooks
 (* Function       : 
@@ -232,7 +223,6 @@ BEGIN
    END;
 END; (* IntrHandler.DoHooks *)
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : TimerHook.Init
 (* Function       : 
@@ -244,7 +234,6 @@ BEGIN
    _Active := FALSE;
 END; (* TimerHook.Init *)
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : TimerHook.SetTimeout
 (* Function       : 
@@ -262,7 +251,6 @@ BEGIN
    PopF;
 END; (* TimerHook.SetTimeout *)
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : TimerHook.CancelTimeout
 (* Function       : 
@@ -280,7 +268,6 @@ BEGIN
    PopF;
 END; (* TimerHook.CancelTimeout *)
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Func. Name     : TimerHook.IsActive
 (* Function       : 
@@ -291,7 +278,6 @@ BEGIN
    IsActive := _Active;
 END; (* TimerHook.IsActive *)
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : TimerHook.TimeoutAction
 (* Function       : 
@@ -302,7 +288,6 @@ BEGIN
    Abstract;
 END; (* TimerHook.TimeoutAction *)
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : TimerHook.IntrAction
 (* Function       : 
@@ -318,7 +303,6 @@ BEGIN
 END; (* TimerHook.IntrAction *)
 
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : SrvcInt
 (* Function       : Handles service request from simulator microcode
@@ -341,18 +325,19 @@ BEGIN
       AW_OP:AWAction;
 
       DUMMY_OP: ;  (* Used to switch screen *)
+
    END;
 
    WITH State8000 DO
    IF NextScreen <> $FF THEN
    BEGIN
       ScreenTab[NextScreen]^.ToPhysScreen;
+      CurRCScreenNo := NextScreen;
       NextScreen := $FF;
    END;
 
 END; (* SrvcInt *)
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : EatKeystroke
 (* Function       : Removes one keystroke from keyboard buffer
@@ -370,7 +355,6 @@ BEGIN
    PopF;
 END; (* EatKeystroke *)
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : _KeybInt
 (* Function       : Handles keyboard hardware interrupt
@@ -442,7 +426,6 @@ BEGIN
    Dec(IntrLevel);
 END;
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : InitV
 (* Function       : InitVector w. check
@@ -456,7 +439,6 @@ BEGIN
 
 END; (* InitV *)
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : TickInt
 (* Function       : Handles Tick hardware interrupt
@@ -494,7 +476,6 @@ BEGIN
    Dec(IntrLevel);  (* MUST be reentrant (smartdrv) *)
 END;
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : TickHandler.Init
 (* Function       : 
@@ -514,7 +495,6 @@ BEGIN
    InterruptsOn;
 END; (* TickHandler.Init *)
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : SysReqKeyPressed
 (* Function       : 
@@ -528,7 +508,6 @@ BEGIN
    END;
 END; (* SysReqKeyPressed *)
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : SysInt
 (* Function       : INT15H handler.
@@ -552,7 +531,6 @@ BEGIN
    ChainInt(Regs,IsrArray[SysIntHandle].OrigAddr);
 END; (* SysInt *)
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : KeybHandler.Init
 (* Function       : 
@@ -566,7 +544,6 @@ BEGIN
    InitV(9,KeybIntHandle,@KeybInt);
 END; (* KeybHandler.Init *)
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : InitIntHandlers
 (* Function       : Set up interrupt procedures for timer and keyboard.
@@ -580,7 +557,6 @@ BEGIN
    InitV($15,SysIntHandle,@SysInt);
 END; (* InitIntHandlers *)
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Func. Name     : Full8254Supported
 (* Function       : Check whether System Timer 0 supports the functions 
@@ -632,7 +608,6 @@ BEGIN
 END; (* Full8254Supported *)
 
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (*****              UNIT ENTRY AND EXIT PROCEDURES
 (**********************************************************************)
@@ -641,7 +616,6 @@ VAR
 
    ExitSave  : pointer;
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : UnitExit
 (* Function       : Exit procedure.
@@ -662,7 +636,6 @@ END; (* UnitExit *)
 
 
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : UnitEntry
 (* Function       : Entry procedure for unit.

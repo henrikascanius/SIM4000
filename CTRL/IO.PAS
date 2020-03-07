@@ -1,5 +1,3 @@
-(*#LEFT 6*)(*#TITLE ""*)
-
 (**********************************************************************)
 (* Unit name      : IO.PAS
 (* Pascal Version : Borland Pascal 7.0
@@ -35,10 +33,10 @@ TYPE
    IoTimerPtr  =  ^IoTimer;
 
    IoTimer     =  OBJECT (TimerHook)
+                     _Owner: POINTER;  (* IODevicePtr *)
+
                      CONSTRUCTOR Init(VAR Owner);
                      PROCEDURE TimeoutAction; VIRTUAL;
-                  PRIVATE
-                     _Owner: POINTER;  (* IODevicePtr *)
                   END;
 
 
@@ -81,7 +79,6 @@ USES
 VAR
    DummyIO  :  IODevice;
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : IOTimer.Init
 (* Function       : 
@@ -93,7 +90,6 @@ BEGIN
    _Owner := @Owner;
 END; (* IOTimer.Init *)
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : IOTimer.IntrAction
 (* Function       : 
@@ -104,7 +100,6 @@ BEGIN
    IODevicePtr(_Owner)^.TimeoutAction;
 END; (* IOTimer.IntrAction *)
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : IODevice.Init
 (* Function       : 
@@ -118,7 +113,6 @@ BEGIN
    Timer.Init(Self);
 END; (* IODevice.Init *)
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : IODevice.Done
 (* Function       : 
@@ -128,7 +122,6 @@ BEGIN
    IOMap[_DevNo] := NIL;
 END; (* IODevice.Done *)
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : IODevice.Sense
 (* Function       : 
@@ -139,7 +132,6 @@ BEGIN
    State8000.Ex23 := 0;
 END; (* IODevice.Sense *)
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : IODevice.Control
 (* Function       : 
@@ -150,7 +142,6 @@ BEGIN
    State8000.Ex23 := 0;
 END; (* IODevice.Control *)
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : IODevice.Rd
 (* Function       : 
@@ -161,7 +152,6 @@ BEGIN
    State8000.Ex23 := 0;
 END; (* IODevice.Rd *)
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : IODevice.Wr
 (* Function       : 
@@ -172,7 +162,6 @@ BEGIN
    State8000.Ex23 := 0;
 END; (* IODevice.Wr *)
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : IODevice.AutoloadWord
 (* Function       : 
@@ -183,7 +172,6 @@ BEGIN
    State8000.Stop := TRUE;  (* Should not occur *)
 END; (* IODevice.AutoloadWord *)
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Func. Name     : IODevice.DeviceID
 (* Function       : 
@@ -194,7 +182,6 @@ BEGIN
    DeviceID := 'UNDEF';
 END; (* IODevice.DeviceID *)
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Func. Name     : IODevice.Configurable
 (* Function       : 
@@ -205,7 +192,6 @@ BEGIN
    Configurable := FALSE;
 END; (* IODevice.Configurable *)
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : Device.Configure
 (* Function       : 
@@ -215,7 +201,6 @@ BEGIN
    Abstract;
 END; (* Device.Configure *)
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : IODevice.MenuConfig
 (* Function       : 
@@ -226,7 +211,6 @@ BEGIN
    Abstract;
 END; (* IODevice.MenuConfig *)
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : IODevice.TimeoutAction
 (* Function       : 
@@ -237,7 +221,6 @@ BEGIN
    Abstract;
 END; (* IODevice.TimeoutAction *)
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : CallIOHandler
 (* Function       : 
@@ -264,7 +247,6 @@ BEGIN
    END;
 END; (* CallIOHandler *)
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : AWAction
 (* Function       : 
@@ -272,11 +254,15 @@ END; (* CallIOHandler *)
 PROCEDURE AWAction;
 
 BEGIN
-   IOMap[0]^.AutoloadWord;
+   WITH State8000 DO
+   IF SrvcParam.EA = -1000 THEN
+   BEGIN
+      Stop := TRUE;
+      Halt := TRUE;
+   END ELSE IOMap[0]^.AutoloadWord;
 END; (* AWAction *)
 
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (*****              UNIT ENTRY AND EXIT PROCEDURES
 (**********************************************************************)
@@ -285,7 +271,6 @@ VAR
 
    ExitSave  : pointer;
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : UnitExit
 (* Function       : Exit procedure.
@@ -302,7 +287,6 @@ END; (* UnitExit *)
 
 
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : UnitEntry
 (* Function       : Entry procedure for unit.

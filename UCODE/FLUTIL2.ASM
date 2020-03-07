@@ -225,17 +225,7 @@ NormAndRoundFloat2 MACRO
 ; All xtra bits must be 0.
 
 StoreFloat MACRO wreg,M1,M2,E
-        LOCAL @@1
 
-        test    S8.Ex21,4
-        jz      @@1             ; jum if not low prec. mode
-
-        ; Low precision: Set 2 last bits of mantissa equal to the last but 2.
-        and     &M2,0C0000000H  ; Clear 2 LSB
-        test    &M2,040000000H
-        jz      @@1
-        or      &M2,030000000H  ; Set 2 MSB
-@@1:
         shrd    &M2,&M1,8
         shr     &E,12
         or      &M2,&E

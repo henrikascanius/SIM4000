@@ -1,5 +1,5 @@
 CONST
 VersString      =
-'Version 1.2';
+'Version 2.0';
 VersYear        =
-'2001';
+'1996';

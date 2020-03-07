@@ -115,23 +115,6 @@ ChkSti  MACRO
 ;*****
 ;**********************************************************************
 
-        ; ONLY USE EAX!!!
-
-Eval8000Int     MACRO
-        LOCAL @@1,@@2
-
-        mov     eax,es:DWORD PTR [_IR]
-        bt      eax,31                  ; test instr. exception
-        jc      @@2                     ; (cannot be disabled)
-
-        test    es:BYTE PTR [_IntEn],1
-        jz      @@1                     ; Return ZF if int. disabled
-
-@@2:
-        and     eax,es:DWORD PTR [_IM]
-@@1:  
-        ENDM
-
 
 NoBreakAtFetch MACRO
         mov     ax,SCode
@@ -144,23 +127,13 @@ BreakAtFetch MACRO
         ENDM
 
 TestExtInts MACRO
-        LOCAL NoInt,Int
+        LOCAL NoInt
 
         push    es
         mov     ax,State8Seg
         mov     es,ax
-        test    es:BYTE PTR [_Stop],1
-        jnz     Int
-        test    es:BYTE PTR [_IntEn],1
-        jz      NoInt                   ; Return ZF if int. disabled
-        mov     eax,es:DWORD PTR [_IR]
-        and     eax,es:DWORD PTR [_IM]
-        shl     eax,3                   ; dispose of internal exceptions
-        jnz     Int                   
-        cmp     es:BYTE PTR [_NextScreen],0FFH ; Test for screen switch request
-        jne     NoInt
-
-Int:
+        test    es:BYTE PTR [_Running],1
+        jz      NoInt
         BreakAtFetch                    ; We may catch an interrupt already
                                         ; in progress, but never mind...
                                         ; It is OK to make un-necessary
@@ -214,6 +187,7 @@ _IM       EQU   OFFSET State8000.IM             - OFFSET State8000
 _IR       EQU   OFFSET State8000.IR             - OFFSET State8000
 _IntEn    EQU   OFFSET State8000.IntEn          - OFFSET State8000
 _Step     EQU   OFFSET State8000.Step           - OFFSET State8000
+_Running  EQU   OFFSET State8000.Running        - OFFSET State8000
 _Trace    EQU   OFFSET State8000.Trace          - OFFSET State8000
 _Stop     EQU   OFFSET State8000.Stop           - OFFSET State8000
 _NextScreen EQU OFFSET State8000.NextScreen     - OFFSET State8000
@@ -1042,8 +1016,6 @@ ih_hw1:
 ;        je      x2                      ; jump on timer
 
         call    NEAR PTR _IntSim        ; Int. no passes in BL
-        mov     ax,VCPIDS
-        mov     es,ax
 x1:    
         PopSegs
         TestExtInts

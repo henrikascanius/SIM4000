@@ -1,5 +1,3 @@
-(*#LEFT 6*)(*#TITLE ""*)
-
 (**********************************************************************)
 (* Unit name      : FIL.PAS
 (* Pascal Version : Borland Pascal 7.0
@@ -204,7 +202,6 @@ BEGIN
    END;
 END; (* InitEntryScreen *)
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : DoSave
 (* Function       : See SaveFile
@@ -291,7 +288,6 @@ BEGIN
 END; (* DoSave *)
 
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : SaveFile
 (* Function       : Saves a block of core in a file.
@@ -308,7 +304,6 @@ BEGIN
    ES.Done;
 END; (* SaveFile *)
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : DoLoad
 (* Function       : See LoadFile
@@ -390,7 +385,6 @@ BEGIN
 {$I+}
 END; (* DoLoad *)
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : AutoloadMonitor   
 (* Function       : Autoloads monitor placed in a DOS file
@@ -485,7 +479,6 @@ BEGIN
 {$I+}
 END; (* AutoloadMonitor *)
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : LoadFile
 (* Function       : Loads a block of core in a file.
@@ -503,7 +496,6 @@ BEGIN
 END; (* LoadFile *)
 
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (*****              UNIT ENTRY AND EXIT PROCEDURES
 (**********************************************************************)
@@ -512,7 +504,6 @@ VAR
 
    ExitSave  : pointer;
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : UnitExit
 (* Function       : Exit procedure.
@@ -526,7 +517,6 @@ END; (* UnitExit *)
 
 
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : UnitEntry
 (* Function       : Entry procedure for unit.

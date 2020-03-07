@@ -1,5 +1,3 @@
-(*#LEFT 6*)(*#TITLE ""*)
-
 (**********************************************************************)
 (* Program name   : MKDISC.PAS
 (* Pascal Version : Borland Pascal 7.0

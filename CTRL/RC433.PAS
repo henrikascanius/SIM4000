@@ -1,5 +1,3 @@
-(*#LEFT 6*)(*#TITLE ""*)
-
 (**********************************************************************)
 (* Unit name      : RC433.PAS
 (* Pascal Version : Borland Pascal 7.0
@@ -51,7 +49,7 @@ TYPE
    PRIVATE
       DosFile        :  FILE;
       DosFileName    :  STRING[32];
-      MaxSecPresent  :  WORD;
+      MaxSecPresent  :  LONGINT;
 
       Status0        :  LONGINT;
 
@@ -127,7 +125,6 @@ CONST
    CommonTrackBufferP: POINTER = NIL;
 
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : RC433x.Init
 (* Function       : 
@@ -175,7 +172,6 @@ BEGIN
    END;
 END; (* RC433x.Init *)
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : RC433x.Done
 (* Function       : 
@@ -187,7 +183,6 @@ BEGIN
       THEN Close(DosFile);
 END; (* RC433x.Done *)
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : RC433x.InputData
 (* Function       : 
@@ -241,7 +236,6 @@ BEGIN
 
 END; (* RC433x.InputData *)
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : RC433x.OutputData
 (* Function       : 
@@ -304,7 +298,6 @@ END; (* RC433x.OutputData *)
 
 
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Func. Name     : RC433x.Expand
 (* Function       : Expands the dos file to cyl cylinders
@@ -357,7 +350,6 @@ BEGIN
 END; (* RC433x.Expand *)
 
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : RC433xRam.Init
 (* Function       : 
@@ -381,7 +373,6 @@ BEGIN
 
 END; (* RC433xRam.Init *)
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : RC433xRam.Done
 (* Function       : 
@@ -393,7 +384,6 @@ END; (* RC433xRam.Done *)
 
 
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : RC433xRam.InputData
 (* Function       : 
@@ -442,7 +432,6 @@ BEGIN
 
 END; (* RC433xRam.InputData *)
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : RC433xRam.OutputData
 (* Function       : 
@@ -495,7 +484,6 @@ BEGIN
 END; (* RC433xRam.OutputData *)
 
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : RC433x.Sense
 (* Function       : 
@@ -523,7 +511,6 @@ BEGIN
 
 END; (* RC433x.Sense *)
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : RC433x.Control
 (* Function       : 
@@ -594,7 +581,6 @@ BEGIN
    END;
 END; (* RC433x.Control *)
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Func. Name     : RC433x.DeviceID
 (* Function       : 
@@ -606,7 +592,6 @@ BEGIN
 END; (* RC433x.DeviceID *)
 
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (*****              UNIT ENTRY AND EXIT PROCEDURES
 (**********************************************************************)
@@ -615,7 +600,6 @@ VAR
 
    ExitSave  : pointer;
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : UnitExit
 (* Function       : Exit procedure.
@@ -630,7 +614,6 @@ BEGIN
 END; (* UnitExit *)
 
 
-(*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : UnitEntry
 (* Function       : Entry procedure for unit.
