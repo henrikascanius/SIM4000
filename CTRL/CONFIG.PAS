@@ -65,7 +65,6 @@ CONST
 
    CoreSizeDefined: BOOLEAN = FALSE;
 
-   
 VAR
    F: TEXT;
    CurrLine: STRING;
@@ -430,8 +429,8 @@ BEGIN
          IF NOT (Str2Long(Token,L)) OR (Delim <> ' ') 
             THEN Err('Error at IRQ-parameter');
 
-         IF NOT (L IN [2,3,4,5,7])
-            THEN Err('Only IRQ 2,3,4,5 and 7 is supported');
+         IF NOT (L IN [2,3,4,5,7,10,11,12,14,15])
+            THEN Err('Only IRQ 2,3,4,5,7,10,11,12,14,15 is supported');
 
          IrqNo := L;
       END ELSE
@@ -613,11 +612,18 @@ BEGIN
          IF ComNo>0 THEN Err('More than one COM parameter on line');
          CheckAss(Delim);
          Token := NextToken(S,Delim);
-         IF ((Token='MULTIPORT4H') OR (Token='MULTIPORT4L')) AND
+         IF ((Token='MULTIPORT4H') OR (Token='MULTIPORT4L') OR
+             (Token='MULTIPORT4HX') OR (Token='MULTIPORT4LX')) AND
             (Delim='.') THEN
          BEGIN  (* Device on multiport card *)
             IF IrqNo>0 THEN Err('IRQ/Multiport param conflict');
 
+            IF Pos('4HX',Token)<>0
+               THEN Multi4Id := HIGHX_ADDR
+            ELSE
+            IF Pos('4LX',Token)<>0
+               THEN Multi4Id := LOWX_ADDR
+            ELSE
             IF Pos('4H',Token)<>0
                THEN Multi4Id := HIGH_ADDR
                ELSE Multi4Id := LOW_ADDR;
@@ -1143,6 +1149,8 @@ BEGIN
    IF Token = 'PUNCH'       THEN DefinePunch(S) ELSE
    IF Token = 'MULTIPORT4H' THEN DefineMultiport4(S,HIGH_ADDR) ELSE
    IF Token = 'MULTIPORT4L' THEN DefineMultiport4(S,LOW_ADDR) ELSE
+   IF Token = 'MULTIPORT4HX'THEN DefineMultiport4(S,HIGHX_ADDR) ELSE
+   IF Token = 'MULTIPORT4LX'THEN DefineMultiport4(S,LOWX_ADDR) ELSE
    IF Token = 'EXPANDER'    THEN DefineInterruptExpander(S) ELSE
    IF Token = 'CONSOLE'     THEN DefineConsole(S,FALSE) ELSE
    IF Token = 'COMTERM'     THEN DefineComTerminal(S) ELSE

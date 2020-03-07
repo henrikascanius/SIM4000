@@ -32,6 +32,7 @@ USES
       TimeConst8000     =  30545;   (* 1.193180MHz * 25.6ms ALSO INSTMACC.ASM *)
       SysTimerBase      =  $40;
       I8259_1Base       =  $20; 
+      I8259_2Base       =  $A0; 
 
 TYPE
    KeybParam   =  RECORD
@@ -106,6 +107,15 @@ PROCEDURE EatKeystroke;
 PROCEDURE InitV (IntNumber,Handle: BYTE; UserRoutine: POINTER);
 PROCEDURE InitIntHandlers;
 FUNCTION  Full8254Supported: BOOLEAN;
+
+
+PROCEDURE SendEOI2;
+  {-Send an End Of Interrupt command to the
+    secondary Programmable Interrupt Controller}
+  inline(
+    $B0/$20/                 {mov al,$20}
+    $E6/$A0);                {out $A0,al}
+
 
 (*#PAGE*)
 IMPLEMENTATION

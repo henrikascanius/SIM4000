@@ -12,6 +12,7 @@
 (* ------------------------
 (*  Console device simulator
 (* 96-09-28 21:02 HJ "RC8000-like" version
+(* 97-01-11 01:16 HJ Vers. 2.1: Extend from 2 to 4 multiport4 cards
 (**********************************************************************)
 
 {$F+}
@@ -30,7 +31,7 @@ USES
    Scrn;
 
 TYPE
-   Multiport4ID = (HIGH_ADDR,LOW_ADDR);
+   Multiport4ID = (HIGH_ADDR,LOW_ADDR,HIGHX_ADDR,LOWX_ADDR);
 
 
 CONST
@@ -42,11 +43,13 @@ CONST
    DCD            = $80;
 
    Multiport4AddrMap: ARRAY [Multiport4ID,1..4] OF WORD =
-      (($2A0,$2A8,$2B0,$2B8),    (* HIGH_ADDR *)
-       ($1A0,$1A8,$1B0,$1B8));   (* LOW_ADDR  *)
+      (($2A0,$2A8,$2B0,$2B8),    (* HIGH_ADDR  *)
+       ($1A0,$1A8,$1B0,$1B8),    (* LOW_ADDR   *)
+       ($2C0,$2C8,$2D0,$2D8),    (* HIGHX_ADDR *)
+       ($1C0,$1C8,$1D0,$1D8));   (* LOWX_ADDR  *)
 
    Multiport4VectorMap: ARRAY[Multiport4ID] OF WORD =
-      ($2BF,$1BF);
+      ($2BF,$1BF,$2DF,$1DF);
 
 
 TYPE
@@ -1015,7 +1018,7 @@ CONSTRUCTOR ComDevice.Init (DevNo: WORD;
                             ConnectLine,ReadyLine: BYTE);
 
 (* IRQ: If std. COM port = Interrupt request no. (0-7).
-        If multiport device: Ord(MultiportID) SHL 4 + (portno-1);
+        If multiport device: (Ord(MultiportID)+1) SHL 4 + (portno-1);
 *)
 
 
@@ -1403,30 +1406,71 @@ END; (* ComIntrHandler.DoHooks *)
 
 (**********************************************************************)
 (* Proc. Name     : Multiport4Interrupt
-(* Function       : 
+(* Function       : Common Multiport handler
 (**********************************************************************)
-PROCEDURE Multiport4Interrupt (BP: WORD);
-INTERRUPT;
+PROCEDURE Multiport4Interrupt (HandlerP: Multiport4HandlerPtr);
 
 VAR
-   Regs: IntRegisters ABSOLUTE BP;
    ISR: BYTE;
 
 BEGIN
-   Port[I8259_1Base] := $0B;  (* Read ISR *)
-   ISR := Port[I8259_1Base];
+   WITH HandlerP^ DO
+   IF _IRQ > 7 THEN
+   BEGIN  (* On 2nd interrupt controller *)
+      Port[I8259_2Base] := $0B;  (* Read ISR *)
+      ISR := Port[I8259_2Base];
 
-   IF (MultiPort4Handlers[HIGH_ADDR] <> NIL) AND
-      ((ISR AND MultiPort4Handlers[HIGH_ADDR]^._ISRMask) <> 0)
-      THEN MultiPort4Handlers[HIGH_ADDR]^.DoHooks(Regs);
+      IF ((ISR AND _ISRMask) <> 0) THEN DoHooks(ISR);
 
-   IF (MultiPort4Handlers[LOW_ADDR] <> NIL) AND
-      ((ISR AND MultiPort4Handlers[LOW_ADDR]^._ISRMask) <> 0)
-      THEN MultiPort4Handlers[LOW_ADDR]^.DoHooks(Regs);
+      InterruptsOn;
+      SendEOI2;
+      SendEOI;
+   END ELSE
 
-   InterruptsOn;
-   SendEOI;
+   BEGIN (* On primary interrupt controller *)
+      Port[I8259_1Base] := $0B;  (* Read ISR *)
+      ISR := Port[I8259_1Base];
+
+      IF ((ISR AND _ISRMask) <> 0) THEN DoHooks(ISR);
+
+      InterruptsOn;
+      SendEOI;
+   END;
 END; (* Multiport4Interrupt *)
+
+
+(**********************************************************************)
+(* Proc. Name     : Multiport4XXInterrupt
+(* Function       : Handlers for each possible multiport card
+(**********************************************************************)
+
+PROCEDURE Multiport4HInterrupt(BP: WORD);
+INTERRUPT;
+
+BEGIN
+   Multiport4Interrupt(MultiPort4Handlers[HIGH_ADDR]);
+END;
+
+PROCEDURE Multiport4LInterrupt(BP: WORD);
+INTERRUPT;
+
+BEGIN
+   Multiport4Interrupt(MultiPort4Handlers[LOW_ADDR]);
+END;
+
+PROCEDURE Multiport4HXInterrupt(BP: WORD);
+INTERRUPT;
+
+BEGIN
+   Multiport4Interrupt(MultiPort4Handlers[HIGHX_ADDR]);
+END;
+
+PROCEDURE Multiport4LXInterrupt(BP: WORD);
+INTERRUPT;
+
+BEGIN
+   Multiport4Interrupt(MultiPort4Handlers[LOWX_ADDR]);
+END;
 
 
 (**********************************************************************)
@@ -1437,6 +1481,7 @@ CONSTRUCTOR Multiport4Handler.Init (Id: Multiport4ID; IRQ: BYTE);
 
 VAR
    I: WORD;
+   Vect: BYTE;
 
 BEGIN
    INHERITED Init;
@@ -1444,9 +1489,25 @@ BEGIN
    _Id            := Id;
    _IntHandle     := AllocateIntHandle(TRUE);
    _IRQ           := IRQ;
-   _ISRMask       := 1 SHL IRQ;
+   _ISRMask       := 1 SHL (IRQ AND $7);
 
-   InitV(IRQ+8,_IntHandle,@Multiport4Interrupt);
+   IF IRQ > 7 THEN
+   BEGIN
+      Vect := IRQ-8+$70;
+      Port[I8259_2Base+1] := Port[I8259_2Base+1] OR _ISRMask; (* Disable on 8259 *)
+   END ELSE
+
+   BEGIN
+      Vect := IRQ+8;
+      Port[I8259_1Base+1] := Port[I8259_1Base+1] OR _ISRMask; (* Disable on 8259 *)
+   END;
+
+   CASE Id OF
+      HIGH_ADDR : InitV(Vect,_IntHandle,@Multiport4HInterrupt);
+      LOW_ADDR  : InitV(Vect,_IntHandle,@Multiport4LInterrupt);
+      HIGHX_ADDR: InitV(Vect,_IntHandle,@Multiport4HXInterrupt);
+      LOWX_ADDR : InitV(Vect,_IntHandle,@Multiport4LXInterrupt);
+   END;
 
    FOR I := 1 TO 4 DO
    BEGIN
@@ -1454,11 +1515,12 @@ BEGIN
       Port[Multiport4AddrMap[Id,I]+UARTier] := 0;  (* Disable all *)
    END;
 
-   Port[I8259_1Base+1] := Port[I8259_1Base+1] OR _ISRMask;  (* Disable on 8259 *)
-
    (* Seems like disabling "global interrupt" on the multicard draws the
       interrupt line *active*... generate a trigger edge by enabling and
-      disabling while all IER's are =0
+      disabling while all IER's are =0.
+      The "ISA" version of Multiport4 does not implement disabling of
+      "global interrupt", so this problem will not arise, and the following 
+      has no effect.
    *)
    Port[Multiport4VectorMap[Id]] := $80;   (* Enable global int. *)
    Port[Multiport4VectorMap[Id]] := $00;   (* Disable global int. *)
@@ -1478,7 +1540,9 @@ VAR
    I: WORD;
 
 BEGIN
-   Port[I8259_1Base+1] := Port[I8259_1Base+1] OR _ISRMask;  (* Disable on 8259 *)
+   IF _IRQ > 7
+      THEN Port[I8259_2Base+1] := Port[I8259_2Base+1] OR _ISRMask   (* Disable on 8259 *)
+      ELSE Port[I8259_1Base+1] := Port[I8259_1Base+1] OR _ISRMask;  (* Disable on 8259 *)
    Port[Multiport4VectorMap[_Id]] := 0;   (* Disable global int. *)
    FOR I := 1 TO 4 DO
    BEGIN
@@ -1546,21 +1610,18 @@ END; (* Multiport4Handler.DoHooks *)
 (**********************************************************************)
 PROCEDURE ConsPostInit;
 
-BEGIN
-   IF (MultiPort4Handlers[HIGH_ADDR] <> NIL) THEN
-   WITH MultiPort4Handlers[HIGH_ADDR]^ DO
-   BEGIN
-      Port[I8259_1Base+1] := Port[I8259_1Base+1] AND NOT _ISRMask;  (* Enable on 8259 *)
-      Port[Multiport4VectorMap[_Id]] := $80;   (* Enable global int. *)
-   END;
-      
-   IF (MultiPort4Handlers[LOW_ADDR] <> NIL) THEN
-   WITH MultiPort4Handlers[LOW_ADDR]^ DO
-   BEGIN
-      Port[I8259_1Base+1] := Port[I8259_1Base+1] AND NOT _ISRMask;  (* Enable on 8259 *)
-      Port[Multiport4VectorMap[_Id]] := $80;   (* Enable global int. *)
-   END;
+VAR Id: BYTE;
 
+BEGIN
+   FOR Id := 0 TO 3 DO
+   IF (MultiPort4Handlers[Multiport4ID(Id)] <> NIL) THEN
+   WITH MultiPort4Handlers[Multiport4ID(Id)]^ DO
+   BEGIN
+      IF _IRQ > 7
+         THEN Port[I8259_2Base+1] := Port[I8259_2Base+1] AND NOT _ISRMask   (* Enable on 8259 *)
+         ELSE Port[I8259_1Base+1] := Port[I8259_1Base+1] AND NOT _ISRMask;  (* Enable on 8259 *)
+      Port[Multiport4VectorMap[_Id]] := $80;   (* Enable global int. *)
+   END;
 END; (* ConsPostInit *)
 
 
@@ -1581,6 +1642,8 @@ BEGIN
    Exitproc := ExitSave;
    IF MultiPort4Handlers[HIGH_ADDR] <> NIL THEN MultiPort4Handlers[HIGH_ADDR]^.Done;
    IF MultiPort4Handlers[LOW_ADDR] <> NIL THEN MultiPort4Handlers[LOW_ADDR]^.Done;
+   IF MultiPort4Handlers[HIGHX_ADDR] <> NIL THEN MultiPort4Handlers[HIGHX_ADDR]^.Done;
+   IF MultiPort4Handlers[LOWX_ADDR] <> NIL THEN MultiPort4Handlers[LOWX_ADDR]^.Done;
 END; (* UnitExit *)
 
 
@@ -1597,8 +1660,10 @@ BEGIN
    Exitproc := @UnitExit;
 
    ComIntrHndlr.Init;
-   MultiPort4Handlers[HIGH_ADDR] := NIL;
-   MultiPort4Handlers[LOW_ADDR]  := NIL;
+   MultiPort4Handlers[HIGH_ADDR]  := NIL;
+   MultiPort4Handlers[LOW_ADDR]   := NIL;
+   MultiPort4Handlers[HIGHX_ADDR] := NIL;
+   MultiPort4Handlers[LOWX_ADDR]  := NIL;
 END; (* UnitEntry *)
 
 
