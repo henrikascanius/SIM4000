@@ -77,3 +77,20 @@ breakatfetch MACRO                      ; set breakpoint for interrupts
         ENDM
 
 
+CheckAddr MACRO
+       LOCAL @@1
+       pushf
+       cmp eax,20000H
+       jb  @@1
+       popf
+       jmp cs:dword ptr Optable[4004H]
+@@1:   popf
+       ENDM
+
+CheckAddr2 MACRO
+       LOCAL @@1
+       cmp eax,20000H
+       jb  @@1
+       jmp cs:dword ptr Optable[4004H]
+@@1:   
+       ENDM

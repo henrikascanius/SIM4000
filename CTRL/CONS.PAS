@@ -28,6 +28,8 @@ USES
    Io,
    Scrn;
 
+{ $ DEFINE CONSDUMP}
+
 CONST
    KeyBufSize     =  32;
 

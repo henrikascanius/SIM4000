@@ -7,7 +7,7 @@
         INCLUDE UCHEAD.ASM
         INCLUDE ADDRMACM.ASM
 
-; rl, rs, rx, dl, ds, ns
+; dl, ds, ns
 
 ;**********************************************************************
 ;*****
@@ -16,39 +16,6 @@
 ;**********************************************************************
 
 
-
-;**********************************************************************
-
-_rl     MACRO wreg              ; Register Load
-        mov     ebx,ds:[eax*4]
-        mov     ds:[&wreg*4],ebx
-        incic
-        ENDM
-
-        MakeOp  rl,20
-
-
-;**********************************************************************
-
-_rs     MACRO wreg              ; Register Store
-        mov     ebx,ds:[&wreg*4]
-        mov     ds:[eax*4],ebx
-        incic
-        ENDM
-        
-        MakeOp  rs,23
-
-
-;**********************************************************************
-
-_rx     MACRO wreg              ; Register Exchange
-        mov     ebx,ds:[eax*4]
-        xchg    ds:[&wreg*4],ebx
-        mov     ds:[eax*4],ebx
-        incic
-        ENDM
-
-        MakeOp  rx,25
 
 ;**********************************************************************
 ;*****

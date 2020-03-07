@@ -60,6 +60,8 @@ PtrToHuge  ENDP
 VCPIAvail  PROC FAR
            PUBLIC VCPIAvail
 
+        xor     cx,cx
+        mov     di,12H       ; DosBox weirdness
         vcpi    0
         or      ah,ah
         jnz     @@1

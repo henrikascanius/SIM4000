@@ -19,6 +19,20 @@
 ; ZF must indicate zero-condition of effective address (for doubleword op's)
 ; CF must contain LSB (for halfword op's)
 
+CheckAddr MACRO
+       LOCAL @@1
+       pushf
+       cmp eax,20000H
+       jb  @@1
+       popf
+       jmp cs:dword ptr Optable[4004H]
+@@1:   popf
+       ENDM
+
+CheckAddr2 MACRO
+       ENDM
+
+
 amode0  MACRO 
         sar     eax,9
         CheckAddr

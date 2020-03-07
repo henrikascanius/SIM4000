@@ -37,6 +37,7 @@ amode3  MACRO xreg
 
 amode4  MACRO
         sar     eax,9
+        CheckAddr2
         mov     eax,ds:[eax*4+0]
         ENDM
 

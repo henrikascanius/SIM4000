@@ -6,7 +6,7 @@
         INCLUDE UCHEAD.ASM
         INCLUDE ADDRMACM.ASM
 
-; is, ml, ms, xl, xs, pl, ps, kl, ks, sp
+; is, ml, ms, xl, xs, pl, ps
 
 ;**********************************************************************
 ;*****
@@ -137,40 +137,6 @@ _ps     MACRO wreg                      ; Store protection register
         ENDM
 
         MakeOp  ps,29
-
-;**********************************************************************
-
-_kl     MACRO wreg                      ; Load protection key
-                                        ; Protection not implemented.
-        mov     ebx,ds:DWORD PTR [eax*4]; Provoke exception on address fault
-        mov     ds:DWORD PTR [&wreg*4],0
-        incic
-        ENDM
-
-        MakeOp  kl,22
-
-;**********************************************************************
-
-_ks     MACRO wreg                      ; Store protection key
-                                        ; Protection not implemented.
-        mov     ebx,ds:DWORD PTR [eax*4]; Provoke exception on address fault
-        incic
-        ENDM
-
-        MakeOp  ks,51
-
-;**********************************************************************
-
-_sp     MACRO wreg              ; Skip if no protection
-                                ; Protection not implemented.
-
-        mov     ebx,ds:DWORD PTR [eax*4]; Provoke exception on address fault
-        add     esi,8
-        FetchNext
-        
-        ENDM
-
-        MakeOp  sp,21
 
 Code ENDS
      END Start
