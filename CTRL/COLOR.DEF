@@ -1,0 +1,71 @@
+const
+  Colors : ColorSet = (
+    TextColor       : WhiteOnBlue;       TextMono        : WhiteOnBlack;
+    CtrlColor       : WhiteOnBlue;       CtrlMono        : WhiteOnBlack;
+    FrameColor      : CyanOnBlue;         FrameMono       : LtGrayOnBlack;
+    HeaderColor     : BlackOnLtGray;       HeaderMono      : BlackOnLtGray;
+    ShadowColor     : DkGrayOnBlack;      ShadowMono      : WhiteOnBlack;
+    HighlightColor  : WhiteOnRed;         HighlightMono   : BlackOnLtGray;
+    PromptColor     : WhiteOnBlue;       PromptMono      : WhiteOnBlack;
+    SelPromptColor  : WhiteOnBlue;       SelPromptMono   : WhiteOnBlack;
+    ProPromptColor  : LtGrayOnBlue;       ProPromptMono   : LtGrayOnBlack;
+    FieldColor      : WhiteOnBlue;       FieldMono       : WhiteOnBlack;
+    SelFieldColor   : BlueOnCyan;         SelFieldMono    : WhiteOnBlack;
+    ProFieldColor   : YellowOnBlue;       ProFieldMono    : WhiteOnBlack;
+    ScrollBarColor  : CyanOnBlue;         ScrollBarMono   : LtGrayOnBlack;
+    SliderColor     : CyanOnBlue;         SliderMono      : WhiteOnBlack;
+    HotSpotColor    : BlackOnCyan;        HotSpotMono     : BlackOnLtGray;
+    BlockColor      : YellowOnCyan;       BlockMono       : WhiteOnBlack;
+    MarkerColor     : WhiteOnCyan;        MarkerMono      : BlackOnLtGray;
+    DelimColor      : YellowOnBlue;       DelimMono       : WhiteOnBlack;
+    SelDelimColor   : BlueOnCyan;         SelDelimMono    : WhiteOnBlack;
+    ProDelimColor   : YellowOnBlue;       ProDelimMono    : WhiteOnBlack;
+    SelItemColor    : WhiteOnCyan;       SelItemMono     : BlackOnLtGray;
+    ProItemColor    : LtGrayOnBlue;       ProItemMono     : LtGrayOnBlack;
+    HighItemColor   : WhiteOnBlue;        HighItemMono    : WhiteOnBlack;
+    AltItemColor    : WhiteOnBlue;        AltItemMono     : WhiteOnBlack;
+    AltSelItemColor : WhiteOnCyan;        AltSelItemMono  : BlackOnLtGray;
+    FlexAHelpColor  : WhiteOnBlue;        FlexAHelpMono   : WhiteOnBlack;
+    FlexBHelpColor  : WhiteOnBlue;        FlexBHelpMono   : WhiteOnBlack;
+    FlexCHelpColor  : LtCyanOnBlue;       FlexCHelpMono   : BlackOnLtGray;
+    UnselXrefColor  : YellowOnBlue;       UnselXrefMono   : LtBlueOnBlack;
+    SelXrefColor    : WhiteOnCyan;        SelXrefMono     : BlackOnLtGray;
+    MouseColor      : WhiteOnRed;         MouseMono       : BlackOnLtGray
+  );
+
+
+
+
+  EntryColors : ColorSet = (
+    TextColor       : WhiteOnBlue;       TextMono        : WhiteOnBlack;
+    CtrlColor       : WhiteOnBlue;       CtrlMono        : WhiteOnBlack;
+    FrameColor      : CyanOnBlue;         FrameMono       : LtGrayOnBlack;
+    HeaderColor     : BlackOnLtGray;       HeaderMono      : BlackOnLtGray;
+    ShadowColor     : DkGrayOnBlack;      ShadowMono      : WhiteOnBlack;
+    HighlightColor  : WhiteOnRed;         HighlightMono   : BlackOnLtGray;
+    PromptColor     : WhiteOnBlue;       PromptMono      : WhiteOnBlack;
+    SelPromptColor  : WhiteOnBlue;       SelPromptMono   : WhiteOnBlack;
+    ProPromptColor  : LtGrayOnBlue;       ProPromptMono   : LtGrayOnBlack;
+    FieldColor      : WhiteOnBlue;       FieldMono       : WhiteOnBlack;
+    SelFieldColor   : BlackOnLtGray;      SelFieldMono    : WhiteOnBlack;
+    ProFieldColor   : LtGrayOnBlue;       ProFieldMono    : LtGrayOnBlack;
+    ScrollBarColor  : CyanOnBlue;         ScrollBarMono   : LtGrayOnBlack;
+    SliderColor     : CyanOnBlue;         SliderMono      : WhiteOnBlack;
+    HotSpotColor    : BlackOnCyan;        HotSpotMono     : BlackOnLtGray;
+    BlockColor      : YellowOnCyan;       BlockMono       : WhiteOnBlack;
+    MarkerColor     : WhiteOnCyan;        MarkerMono      : BlackOnLtGray;
+    DelimColor      : YellowOnBlue;       DelimMono       : WhiteOnBlack;
+    SelDelimColor   : BlueOnCyan;         SelDelimMono    : WhiteOnBlack;
+    ProDelimColor   : YellowOnBlue;       ProDelimMono    : WhiteOnBlack;
+    SelItemColor    : WhiteOnCyan;       SelItemMono     : BlackOnLtGray;
+    ProItemColor    : LtGrayOnBlue;       ProItemMono     : LtGrayOnBlack;
+    HighItemColor   : WhiteOnBlue;        HighItemMono    : WhiteOnBlack;
+    AltItemColor    : WhiteOnBlue;        AltItemMono     : WhiteOnBlack;
+    AltSelItemColor : WhiteOnCyan;        AltSelItemMono  : BlackOnLtGray;
+    FlexAHelpColor  : WhiteOnBlue;        FlexAHelpMono   : WhiteOnBlack;
+    FlexBHelpColor  : WhiteOnBlue;        FlexBHelpMono   : WhiteOnBlack;
+    FlexCHelpColor  : LtCyanOnBlue;       FlexCHelpMono   : BlackOnLtGray;
+    UnselXrefColor  : YellowOnBlue;       UnselXrefMono   : LtBlueOnBlack;
+    SelXrefColor    : WhiteOnCyan;        SelXrefMono     : BlackOnLtGray;
+    MouseColor      : WhiteOnRed;         MouseMono       : BlackOnLtGray
+  );
