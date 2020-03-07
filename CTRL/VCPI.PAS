@@ -13,8 +13,6 @@
 (* Functional description :
 (* ------------------------
 (*  VCPI-specific part of SIM8000.
-(*  Change history:
-(* 94-12-10 18:25 HJ Release VCPI memory before EMS handle (STEALTH problem)
 (*
 (**********************************************************************)
 
@@ -499,11 +497,10 @@ VAR
 PROCEDURE UnitExit;
 
 BEGIN
-   ReleaseMemory;
-
    IF EmsAllocated THEN
       IF DeallocateEMSHandle(EmsHandle) THEN;
 
+   ReleaseMemory;
 
    Exitproc := ExitSave;
 END; (* UnitExit *)

@@ -2,3 +2,5 @@
 *.COM
 *.TPU
 *.EXE
+*.OBJ
+*.MAP

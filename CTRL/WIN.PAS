@@ -39,7 +39,6 @@ USES
 
 CONST
   AutoAutoload: BOOLEAN = FALSE; 
-  AutoStart   : BOOLEAN = FALSE; 
 
   Frame1    : FrameArray = 'ÚÀ¿ÙÄÄ³³';  (* Window Frame def. *)
   Frame2    : FrameArray = 'ÉÈ»¼ÍÍºº';  (* Window Frame def. *)
@@ -255,8 +254,7 @@ PROCEDURE WinSys.Process;
 
 BEGIN
    IF CurrentWin = NIL THEN CurrentWin := DoubleListPtr(@Self)^.Head;
-   IF AutoAutoload THEN AutoloadButton ELSE
-   IF AutoStart THEN StartButton;
+   IF AutoAutoload THEN AutoloadButton;
    REPEAT
       WITH Win8000Ptr(CurrentWin)^ DO
       BEGIN

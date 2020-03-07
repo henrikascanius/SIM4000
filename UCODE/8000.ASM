@@ -8,12 +8,6 @@
 ;*****  8000.ASM : Common frame for the RC8000 code interpreter modules.
 ;*****
 ;**********************************************************************
-;***** Change history:
-;***** 94-11-13 23:09 HJ Obsolete code removed(fetch, afteramfetch); 
-;*****               
-;*****                          
-;*****
-;**********************************************************************
 
         MASM 
         .386P
@@ -55,9 +49,9 @@ Code    SEGMENT USE32
 ;*               MAP OF CODE SEGMENT WHEN LOADED:
 ;*
 ;*      0h : optable
-;*   4000h : fetch (obsolete)
+;*   4000h : fetch
 ;*   4040h : run
-;*   4080h : afteramfetch (obsolete)
+;*   4080h : afteramfetch
 ;*   4100h : Bad opcode handling
 ;*   4180h : Break
 ;*
@@ -92,13 +86,26 @@ optable         EQU     0
 
         IFDEF Part0
 
-        ; Loc. 4000H-403FH reserved for "fetch" routine in prev. versions
+
+;fetch:                                 ; fetch instruction
+        mov     eax,[esi]
+fetch1  EQU     SMALL $-100H+2000H      ; Opcode table is 16-bit when assembling,
+                                        ; 32-bit when running
+        rol     eax,12
+
+        mov     di,ax
+        sar     eax,12                  ; place D-field as operand in EAX
+        jmp     gs:DWORD PTR optable[edi*4]
 
         ORG     100H+run-2000H
 ;run:                                   ; Entry point for _Run8000
+
         mov     eax,[esi]
-        BreakAtFetch                    ; Always test for interrupts after
-                                        ; 1st instruction
+        test    ebx,2
+        jz      NoBp0
+        and     ebx,-1-2
+        BreakAtFetch
+NoBp0:
         mov     dr7,ebx                 ; set breakpoint AFTER 1st fetch
         xor     edi,edi                 ; edi[31..16] must always be 0
 
@@ -107,10 +114,18 @@ optable         EQU     0
         mov     di,ax
         sar     eax,12                  ; place D-field as operand in EAX
         jmp     cs:DWORD PTR optable[edi*4]
-                                        ; jump thru cs, NOT gs; we don't
-                                        ; want a break before 1st instruction
 
-        ; Loc 4080H-40FFH no longer used
+
+        ORG     100H+afteramfetch-2000H
+
+;afteramfetch:                          ; fetch instruction
+        mov     ebx,eax
+        mov     eax,[esi]
+        rol     eax,12
+        mov     di,ax
+        sar     eax,12                  ; place D-field as operand in EBX
+        add     eax,ebx                 ; add to EA of prev. am instr.
+        jmp     cs:DWORD PTR optable[edi*4]
 
 
         ORG     100H+BadOpCode-2000H
@@ -161,7 +176,7 @@ _Int:
         mov     dr7,ebx
         sti
 _NoInt:  
-        cmp     S8.NextScreen,0FFH      ; Handle virt. screen switch
+        cmp     S8.NextScreen,0FFH
         jne     _Br
         mov     al,S8.Trace
         or      al,S8.Stop

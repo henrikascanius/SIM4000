@@ -404,9 +404,8 @@ BEGIN
 
       (* Console switching, actual switching is done in SrvcIntr. 
          The protected mode part of the interrupt handler breaks
-         the microcode in the same way as an interrupt.
-         The "Break8000" handler examines
-         the NextScreen var. and issues a service-interrupt to switch. *)
+         the microcode at the "fetch" point. The Debug trap handler examines
+         the NextScreen var. and makes a service-interrupt to switch. *)
 
       IF ((Key AND $FF) = 0) AND (Key >= $7800) AND 
          ((Key SHR 8) < $78+MaxScreen) AND State8000.Running THEN

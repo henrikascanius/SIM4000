@@ -4,7 +4,6 @@
 (* Unit name      : CONFIG.PAS
 (* Pascal Version : Borland Pascal 7.0
 (* Change History :
-(* 95-09-13 21:31   HJ ConfigName extended from 16 to 80 chars
 (* 93-02-20 17:51   HJ Initial version
 (*
 (*
@@ -25,7 +24,7 @@ UNIT CONFIG;
 INTERFACE
 
 CONST
-   ConfigName: STRING[80] = 'RC4000.CFG';
+   ConfigName: STRING[16] = 'RC4000.CFG';
 
    CoreMin:    LONGINT  =  131072;
    CoreMax:    LONGINT  =  8388607;
@@ -47,7 +46,6 @@ USES
    Rc851,
    Clock,
    RC4818,
-   Rc433,
    DosDev,
    Util,
    Dos,
@@ -766,77 +764,6 @@ END; (* DefineRC4819 *)
 
 (*#CPAGE 20*)
 (**********************************************************************)
-(* Proc. Name     : DefineRC433x
-(* Function       : 
-(**********************************************************************)
-PROCEDURE DefineRC433x (VAR S: STRING; RamDisc: BOOLEAN);
-
-VAR
-   Dev:   INTEGER;
-   Path:    STRING;
-   NoOfSegs: LONGINT;
-   Token:   STRING;
-   Delim:   CHAR;
-   UnitP:   RC433xPtr;
-   L:       LONGINT;
-
-BEGIN
-   Dev := -1;
-   Path := '';
-   NoOfSegs := 0;
-
-   WHILE Length(S) > 0 DO
-   BEGIN
-      Token := NextToken(S,Delim);
-
-      IF Token = 'DEVNO' THEN GetDevno(S,Delim,Dev) ELSE
-
-      IF Token = 'DOSFILE' THEN
-      BEGIN
-         IF RamDisc THEN Err('Dosfile not applicable for RC433xRAM');
-         IF Path<>'' THEN Err('More than one Dosfile param. on line');
-         CheckAss(Delim);
-         Path := NextToken(S,Delim);
-         IF Delim <> ' '
-            THEN Err('Error at Dosfile parameter');
-         (* Further checking done by RC433x.Init *)
-      END ELSE
-
-      IF Token = 'SEGS' THEN
-      BEGIN
-         IF NOT RamDisc THEN Err('Segs only applicable for RC433xRAM');
-         IF NoOfSegs<>0 THEN Err('More than one Segs param. on line');
-         CheckAss(Delim);
-         Path := NextToken(S,Delim);
-         IF Delim <> ' '
-            THEN Err('Error at Segs parameter');
-         IF NOT Str2Long(Path,NoOfSegs) OR (NoOfSegs < 256) OR
-                (NoOfSegs > 73080)
-            THEN Err('Segs parameter must be in the range 256..73080');
-
-      END ELSE
-
-      IF Token = '' THEN Err('Bad syntax at '''+Delim+'''')
-                    ELSE Err('Unknown parameter: '+Token);
-            
-   END;
-
-   IF Dev < 0 THEN Err('Device no. not defined');
-   IF (Path='') AND NOT RamDisc THEN
-      Err('Dosfile not defined');
-   IF (NoOfSegs = 0) AND RamDisc THEN
-      Err('Segs not defined');
-
-   IF RamDisc
-      THEN UnitP := New(RC433xRamPtr,Init(Dev,NoOfSegs))
-      ELSE UnitP := New(RC433xPtr,Init(Dev,Path));
-   IF UnitP = NIL THEN
-      Err('Could not create RC433x disc, device no. '+Long2Str(Dev));
-
-END; (* DefineRC433x *)
-
-(*#CPAGE 20*)
-(**********************************************************************)
 (* Proc. Name     : DefineDos
 (* Function       : 
 (**********************************************************************)
@@ -895,8 +822,6 @@ BEGIN
    IF Token = 'CLOCK'      THEN DefineClock(S) ELSE
    IF Token = 'DFC403'     THEN DefineDFC403(S) ELSE
    IF Token = 'RC4819'     THEN DefineRC4819(S,FALSE) ELSE
-   IF Token = 'RC433X'     THEN DefineRC433X(S,FALSE) ELSE
-   IF Token = 'RC433XRAM'  THEN DefineRC433X(S,TRUE) ELSE
    IF Token = 'RC4819RAM'  THEN DefineRC4819(S,TRUE) ELSE
    IF Token = 'DOS'        THEN DefineDos(S) ELSE
       Err('Unkown device kind: '+Token);

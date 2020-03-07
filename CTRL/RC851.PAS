@@ -4,7 +4,6 @@
 (* Unit name      : RC851.PAS
 (* Pascal Version : Borland Pascal 7.0
 (* Change History :
-(* 95-01-07 02:32   HJ Error when addressing col. 33 on screen
 (* 93-12-12 19:31   HJ Refs to ScreenWidth removed
 (* 93-12-12 01:48   HJ Handle non-std. video modes
 (* 93-05-09 00:21   HJ Initial version
@@ -96,7 +95,7 @@ BEGIN
    IF TState = CURSORA THEN
    BEGIN
       IF Ord(C)>=96 THEN Column := Ord(C)-95 ELSE
-      IF Ord(C)>=64 THEN Column := Ord(C)-31 ELSE
+      IF Ord(C)>=65 THEN Column := Ord(C)-31 ELSE
                          Column := Ord(C)+33;
       TState := CURSORB;
    END ELSE
