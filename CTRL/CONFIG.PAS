@@ -48,6 +48,7 @@ USES
    Clock,
    RC4818,
    Rc433,
+   RC749,
    DosDev,
    Util,
    Dos,
@@ -837,6 +838,51 @@ END; (* DefineRC433x *)
 
 (*#CPAGE 20*)
 (**********************************************************************)
+(* Proc. Name     : DefineRC749
+(* Function       : 
+(**********************************************************************)
+PROCEDURE DefineRC749 (VAR S: STRING);
+
+VAR
+   Dev:  INTEGER;
+   Int:  ARRAY [0..0] OF BYTE;
+
+   Token: STRING;
+   Delim: CHAR;
+   RdPtr: RC749DevicePtr;
+
+BEGIN
+   Int[0] := 0;
+   Dev    := -1;
+
+   WHILE Length(S) > 0 DO
+   BEGIN
+      Token := NextToken(S,Delim);
+      IF Token = 'DEVNO' THEN GetDevno(S,Delim,Dev) ELSE
+      IF Token = 'INTNO' THEN GetIntno(S,Delim,1,Int) ELSE
+      IF Token = ''      THEN Err('Bad syntax at '''+Delim+'''')
+                         ELSE Err('Unknown parameter: '+Token);
+   END;
+
+   IF Dev < 0 THEN Err('Device no. not defined');
+   IF Int[0] = 0 THEN Err('Interrupt not defined');
+   RdPtr := New(RC749DevicePtr,Init(Dev,Int[0]));
+   IF RdPtr = NIL
+      THEN Err('Could not create RC749, device no. '+Long2Str(Dev));
+   
+   
+   Token := GetEnv('MT'+Long2Str(Dev));
+   IF Token <> '' THEN
+   WITH RdPtr^ DO
+   BEGIN
+      MountTape(Token);
+      IF NOT TapePresent THEN
+         Err('Could not assign tape RC749 file: '+Token);
+   END;
+END; (* DefineRC749 *)
+
+(*#CPAGE 20*)
+(**********************************************************************)
 (* Proc. Name     : DefineDos
 (* Function       : 
 (**********************************************************************)
@@ -898,6 +944,7 @@ BEGIN
    IF Token = 'RC433X'     THEN DefineRC433X(S,FALSE) ELSE
    IF Token = 'RC433XRAM'  THEN DefineRC433X(S,TRUE) ELSE
    IF Token = 'RC4819RAM'  THEN DefineRC4819(S,TRUE) ELSE
+   IF Token = 'RC749'      THEN DefineRC749(S) ELSE
    IF Token = 'DOS'        THEN DefineDos(S) ELSE
       Err('Unkown device kind: '+Token);
 END; (* DefineDevice *)
