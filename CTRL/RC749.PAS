@@ -466,9 +466,9 @@ BEGIN
       
 {$IFDEF LOG}
 {$IFNDEF HLLOG}
-      Write(Log,'D:',_DevNo:2,' ');
+      Write(Log,'D:',_DevNo,' ');
       CASE (Modif SHL 2)+1 OF
-         1: Write(Log,'SetTrail ',Long2Str(WReg SHR 8));
+         1: Write(Log,'SetTrail ',Long2Str((WReg SHR 8) AND $FFF));
          5: Write(Log,'TransferAddress ',Long2Str(WReg SHR 8));
          9: Write(Log,'Move ',Long2Str((WReg SHR 8) AND 4095));
         13: Write(Log,'InputOdd ',Long2Str(WReg SHR 8));

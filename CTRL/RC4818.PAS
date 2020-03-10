@@ -21,8 +21,8 @@
 
 {$F+}
 {$X+}
-{$DEFINE LOG}
-{$DEFINE HLLOG} (* High level log, LOG must be defined too *)
+{ $DEFINE LOG}
+{ $DEFINE HLLOG} (* High level log, LOG must be defined too *)
 { $DEFINE NOHDINT}
 
 UNIT RC4818;
