@@ -5,7 +5,7 @@
 ;**********************************************************************
 
         INCLUDE UCHEAD.ASM
-        INCLUDE ADM.ASM
+        INCLUDE ADDRMACM.ASM
 
 ; nd
 
@@ -17,7 +17,7 @@
 
 
 _nd     MACRO wreg              ; Normalize double
-        LOCAL @@1,@@l2,@@l3,@@l4,@@l5,@@r2,@@r3,@@r4,@@r5
+        LOCAL @@1,@@l2,@@l3,@@l4,@@l5,@@l6,@@l7,@@l8,@@r2,@@r3,@@r4,@@r5,@@r6,@@r7,@@r8
 
         LdWPre  ebx,&wreg
         jc      @@1
@@ -42,12 +42,7 @@ _nd     MACRO wreg              ; Normalize double
         mov     ds:[wreg*4],edx
         
         ; Store neg. count in left hw:
-        neg     ecx             
-        shl     ecx,20
-        and     ds:[eax*4],RightHWMask
-        or      ds:[eax*4],ecx
-        mov     cx,di            ; restore Ex
-        incic
+        jmp     @@l7
 
 @@l3:
         ; MSW is 0
@@ -66,18 +61,12 @@ _nd     MACRO wreg              ; Normalize double
 
         add     cx,23           ; Save neg. shift count
         neg     cx
-        shl     ecx,20
-        and     ds:[eax*4],RightHWMask
-        or      ds:[eax*4],ecx
-        mov     cx,di            ; restore Ex
-        incic
-
+        jmp     @@l6
 
 @@l4:        
         ; Operand = 0, left HW:
-        and     ds:[eax*4],RightHWMask
-        or      ds:[eax*4],80000000H
-        incic
+        mov     ecx,80000000H
+        jmp     @@l8
 
 @@l2:
         ; Reg < 0:
@@ -99,8 +88,11 @@ _nd     MACRO wreg              ; Normalize double
         mov     ds:[wreg*4],edx
         
         ; Store neg. count in left hw:
-        neg     ecx             
+@@l7:        
+        neg     ecx
+@@l6:        
         shl     ecx,20
+@@l8:        
         and     ds:[eax*4],RightHWMask
         or      ds:[eax*4],ecx
         mov     cx,di            ; restore Ex
@@ -125,11 +117,7 @@ _nd     MACRO wreg              ; Normalize double
 
         add     cx,23           ; Save neg. shift count
         neg     cx
-        shl     ecx,20
-        and     ds:[eax*4],RightHWMask
-        or      ds:[eax*4],ecx
-        mov     cx,di            ; restore Ex
-        incic
+        jmp     @@l6
 
 @@1:
         ; ******************* Right HW : *********************
@@ -152,13 +140,7 @@ _nd     MACRO wreg              ; Normalize double
         mov     ds:[wreg*4],edx
         
         ; Store neg. count in left hw:
-        neg     ecx             
-        shl     ecx,20
-        shr     ecx,12
-        and     ds:[eax*4],LeftHWMask
-        or      ds:[eax*4],ecx
-        mov     cx,di            ; restore Ex
-        incic
+        jmp     @@r7
 
 @@r3:
         ; MSW is 0
@@ -176,20 +158,13 @@ _nd     MACRO wreg              ; Normalize double
         mov     ds:[&wreg*4],edx
 
         add     cx,23           ; Save neg. shift count
-        neg     ecx             
-        shl     ecx,20
-        shr     ecx,12
-        and     ds:[eax*4],LeftHWMask
-        or      ds:[eax*4],ecx
-        mov     cx,di            ; restore Ex
-        incic
-
+        neg     ecx       
+        jmp     @@r6
 
 @@r4:        
         ; Operand = 0, right HW:
-        and     ds:[eax*4],LeftHWMask
-        or      ds:[eax*4],80000H
-        incic
+        mov     ecx,80000000H
+        jmp     @@r8
 
 @@r2:
         ; Reg < 0:
@@ -211,8 +186,11 @@ _nd     MACRO wreg              ; Normalize double
         mov     ds:[wreg*4],edx
         
         ; Store neg. count in left hw:
-        neg     ecx             
+@@r7:        
+        neg     ecx
+@@r6:        
         shl     ecx,20
+@@r8:        
         shr     ecx,12
         and     ds:[eax*4],LeftHWMask
         or      ds:[eax*4],ecx
@@ -237,13 +215,7 @@ _nd     MACRO wreg              ; Normalize double
         mov     ds:[&wreg*4],edx
 
         add     cx,23           ; Save neg. shift count
-        neg     ecx             
-        shl     ecx,20
-        shr     ecx,12
-        and     ds:[eax*4],LeftHWMask
-        or      ds:[eax*4],ecx
-        mov     cx,di            ; restore Ex
-        incic
+        jmp     @@r7
 
         ENDM
         
