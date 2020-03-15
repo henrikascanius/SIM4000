@@ -71,6 +71,7 @@ TYPE
                      ClockCntP   : FWORD;
                      FullAccuracy: BOOLEAN;
                      NextScreen  : BYTE;  (* Virt. screen to activate *)
+                     CoreWords   : LONGINT;
                      SrvcParam   : SrvcRec;
                   END;
 

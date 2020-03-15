@@ -121,6 +121,7 @@ BEGIN
 
    CoreSize := CreateCore(CoreMin,CoreMax);
    ResetCore;
+   State8000.CoreWords := CoreSize SHR 1;
 
    IF ShowLogo THEN
    WITH Colors DO

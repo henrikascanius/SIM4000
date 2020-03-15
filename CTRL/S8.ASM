@@ -25,6 +25,7 @@ ClockSense      DD      0
 ClockCntP       DF      0
 FullAccuracy    DB      0
 NextScreen      DB      0
+CoreWords       DD      0
 ; SrvcParam part:
 
 ReqKind         DB      0

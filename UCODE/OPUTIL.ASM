@@ -80,7 +80,7 @@ breakatfetch MACRO                      ; set breakpoint for interrupts
 CheckAddr MACRO
        LOCAL @@1
        pushf
-       cmp eax,20000H
+       cmp eax,S8.CoreWords
        jb  @@1
        popf
        jmp cs:dword ptr Optable[4004H]
@@ -89,7 +89,7 @@ CheckAddr MACRO
 
 CheckAddr2 MACRO
        LOCAL @@1
-       cmp eax,20000H
+       cmp eax,S8.CoreWords
        jb  @@1
        jmp cs:dword ptr Optable[4004H]
 @@1:   
