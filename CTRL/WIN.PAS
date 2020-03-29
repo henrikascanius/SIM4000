@@ -89,6 +89,7 @@ CONST
   3,      $00, $3C,    ccSaveFile,       {F2}
   3,      $00, $3D,    ccNewFile,        {F3}
   3,      $00, $22,    ccJmpLine,        {Alt-G}
+  3,      $00, $44,    ccExit,           {F10}
   3,      $00, $2D,    ccExit,           {Alt-X}
   3,      $00, $21,    ccFormat,         {Alt-F}
   3,      $00, $20,    ccDisInt,         {Alt-D}
@@ -111,9 +112,7 @@ CONST
   3,      $00, $EE,    ccQuit,           {Click right}
   3,      $00, $ED,    ccHelp,           {Click both}
   {$ELSE}
-                             0,
-  0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-  0,
+  0, 0, 0, 0, 0, 0, 0, 0,
   {$ENDIF}
 
   0                                      {End of table}

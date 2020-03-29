@@ -51,7 +51,7 @@ TYPE
    PRIVATE
       DosFile        :  FILE;
       DosFileName    :  STRING[32];
-      MaxSecPresent  :  WORD;
+      MaxSecPresent  :  LONGINT;
 
       Status0        :  LONGINT;
 

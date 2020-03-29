@@ -415,6 +415,11 @@ BEGIN
          IF (ScreenTab[ScrnNo] <> NIL) THEN State8000.NextScreen := ScrnNo;
          EatKeystroke;
       END ELSE
+      IF (Key = $4400) AND (State8000.Running) THEN
+      BEGIN  (* Emulate SusReq key as F10 *)
+         State8000.Stop := TRUE;
+         EatKeystroke;
+      END ELSE
 
       BEGIN
          Eaten := FALSE;
