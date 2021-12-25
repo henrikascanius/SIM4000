@@ -31,6 +31,7 @@ USES
 
 CONST
    MaxBytesPerBlock =  768*10;
+   NameSize         =  81;   (* Chars in DOS file name, must be mult. of 3 *)
 
 TYPE
    BlockBuffer    =  ARRAY[0..MaxBytesPerBlock-1] OF BYTE;
@@ -45,9 +46,11 @@ TYPE
                                             IntNo: BYTE);
                            DESTRUCTOR Done; VIRTUAL;
 
-                           PROCEDURE  MountTape(Path: STRING);                           
+                           PROCEDURE  MountTape(Path: STRING);
+                           PROCEDURE  LoadTape(WReg: LONGINT);
                            PROCEDURE  Sense(Modif: BYTE);    VIRTUAL;
                            PROCEDURE  Control(Modif: BYTE);  VIRTUAL;
+                           PROCEDURE  Wr (Modif: BYTE);      VIRTUAL;
                            FUNCTION   DeviceID: STRING;      VIRTUAL;
                            FUNCTION   TapePresent: BOOLEAN;  VIRTUAL;
 
@@ -361,6 +364,58 @@ BEGIN
    END;
 END; (* RC749Device.MountTape *)
 
+
+(*#CPAGE 20*)
+(**********************************************************************)
+(* Proc. Name     : RC749Device.LoadTape
+(* Function       : Mount a tape on request from RC4000 
+(**********************************************************************)
+PROCEDURE RC749Device.LoadTape(WReg: LONGINT);
+
+VAR
+   CoreAddr: LONGINT;
+   Name: STRING[NameSize];
+   N: BYTE;
+   NSize: WORD;
+   Wsize: WORD;
+
+BEGIN
+   IF NOT Unloaded THEN Close(DosFile);
+   Unloaded := TRUE;
+   
+   (* We reserve the first word for future extensions *)
+   CoreAddr := WReg SHR 9 SHL 1;
+
+   Wsize := (LastCore-CoreAddr) SHR 1;  (* Excl. the magic word *)
+   NSize := Wsize * 3;
+   IF (NSize = 0) OR (NSize > NameSize) THEN
+   BEGIN
+      Status0 := OVERRUN_0; (* say... *)
+      WITH State8000 DO IR := IR OR (LONGINT(1) SHL (31-_IntNo));
+      Exit;
+   END;
+   FromCoreTxt(CoreAddr+2, WSize, @Name[1]);
+   Name[0] := Chr(NSize);
+   FOR N := NSize DOWNTO 1 DO IF Name[N] = #0 THEN Name[0] := Chr(N-1);
+{$IFDEF LOG}
+{$IFNDEF HLLOG}
+   WriteLn(Log,'LoadTape: ', Name);
+{$ENDIF}
+{$ENDIF}
+   Assign(DosFile,Name);
+{$I-}
+   Reset(DosFile,1);
+{$I+}
+   Status0 := HIGHDENSITY_0;
+   IF IOResult <> 0 THEN 
+      Status0 := Status0 OR OVERRUN_0
+   ELSE
+      Unloaded := FALSE;
+   CurrBlockLen := ((LastCore - CoreAddr + 2) SHR 1) * 3; (* Include the magic word! *) 
+   WITH State8000 DO IR := IR OR (LONGINT(1) SHL (31-_IntNo));
+END; (* RC749Device.LoadTape *)
+   
+
 (*#CPAGE 20*)
 (**********************************************************************)
 (* Proc. Name     : RC749Device.Init
@@ -422,7 +477,7 @@ BEGIN
 
          0: BEGIN  (* Sense0 *)
                Ex23 := 0;
-               Status := Status0;
+               Status := Status0 OR WRITEENABLE_0;
                SrvcParam.Wreg := Status SHL 8;
 {$IFDEF LOG}
 {$IFNDEF HLLOG}
@@ -495,14 +550,36 @@ BEGIN
                5:     LastCore := (WReg SHR 9) SHL 1;
                9:     MoveTape(WReg);
               13, 45: InputData(WReg);
-              17, 49: BEGIN END;  (* Output, ignored *)
-              21:     BEGIN END; (* Erase, ignored *)
+              17    : BEGIN END;  (* Output odd, ignored *)
+              49    : LoadTape(WReg);  (* Hack: Load a new tape *)
+              21:     BEGIN
+                         Status0 := HIGHDENSITY_0;
+                         WITH State8000 DO IR := IR OR (LONGINT(1) SHL (31-_IntNo));
+                      END; (* Erase, ignored *)
                 ELSE ;
           END;
          PopF;
       END;
    END;
 END; (* RC749Device.Control *)
+
+(*#CPAGE 20*)
+(**********************************************************************)
+(* Proc. Name     : RC749Device.Wr
+(* Function       : 
+(**********************************************************************)
+PROCEDURE RC749Device.Wr (Modif: BYTE);
+
+BEGIN
+   (* Write tapemark, just OK for now, ignore *)
+{$IFDEF LOG}
+{$IFNDEF HLLOG}
+      WriteLn(Log,'D:',_DevNo,' WRITE TAPEMARK');
+{$ENDIF}
+{$ENDIF}
+   Status0 := HIGHDENSITY_0;
+   WITH State8000 DO IR := IR OR (LONGINT(1) SHL (31-_IntNo));
+END; (* RC749Device.Wr *)
 
 (*#CPAGE 20*)
 (**********************************************************************)
