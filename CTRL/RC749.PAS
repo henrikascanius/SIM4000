@@ -61,6 +61,7 @@ TYPE
                            LastCore       : LONGINT;
                            Fault          : BOOLEAN;
                            Unloaded       : BOOLEAN;
+                           FakeMounted    : BOOLEAN;
 
                            DosFile        :  FILE;
                            DosFileName    :  STRING[32];
@@ -236,7 +237,10 @@ BEGIN
       END;
       
       5: (* Unload tape *)
-      Unloaded := TRUE;
+      BEGIN
+         Unloaded := TRUE;
+         FakeMounted := TRUE;
+      END;
       
       ELSE ;
    END;
@@ -390,6 +394,11 @@ BEGIN
    NSize := Wsize * 3;
    IF (NSize = 0) OR (NSize > NameSize) THEN
    BEGIN
+{$IFDEF LOG}
+{$IFNDEF HLLOG}
+      WriteLn(Log,'LoadTape: ***Nsize = ', NSize);
+{$ENDIF}
+{$ENDIF}
       Status0 := OVERRUN_0; (* say... *)
       WITH State8000 DO IR := IR OR (LONGINT(1) SHL (31-_IntNo));
       Exit;
@@ -408,7 +417,10 @@ BEGIN
 {$I+}
    Status0 := HIGHDENSITY_0;
    IF IOResult <> 0 THEN 
-      Status0 := Status0 OR OVERRUN_0
+   BEGIN
+      Status0 := Status0 OR OVERRUN_0;
+      FakeMounted := TRUE;
+   END
    ELSE
       Unloaded := FALSE;
    CurrBlockLen := ((LastCore - CoreAddr + 2) SHR 1) * 3; (* Include the magic word! *) 
@@ -435,6 +447,7 @@ BEGIN
    LastCore := 0;
    Fault := FALSE;
    Unloaded := TRUE;
+   FakeMounted := TRUE;
 
    IF NOT GetMemCheck(BlockBufferP,MaxBytesPerBlock)
       THEN FatalError('RC749 Init: No heap memory');
@@ -471,7 +484,8 @@ BEGIN
    WITH State8000 DO
    BEGIN
       Ex22 := Ord(Fault);
-      IF Unloaded THEN Status0 := Status0 OR INTERVENTION_0;
+      IF Unloaded AND NOT FakeMounted THEN Status0 := Status0 OR INTERVENTION_0;
+      IF NOT Unloaded THEN FakeMounted := FALSE;
 
       CASE Modif OF
 
@@ -513,16 +527,19 @@ END; (* RC749Device.Sense *)
 (**********************************************************************)
 PROCEDURE RC749Device.Control (Modif: BYTE);
 
+VAR
+   Op: WORD;
 
 BEGIN
    WITH State8000, SrvcParam DO
    BEGIN
       Ex22 := Ord(Fault);
+      Op := (Modif SHL 2)+1;
       
 {$IFDEF LOG}
 {$IFNDEF HLLOG}
       Write(Log,'D:',_DevNo,' ');
-      CASE (Modif SHL 2)+1 OF
+      CASE Op OF
          1: Write(Log,'SetTrail ',Long2Str((WReg SHR 8) AND $FFF));
          5: Write(Log,'TransferAddress ',Long2Str(WReg SHR 8));
          9: Write(Log,'Move ',Long2Str((WReg SHR 8) AND 4095));
@@ -540,18 +557,27 @@ BEGIN
 {$ENDIF}
 
       Ex23 := 0;
-
-      IF (NOT Unloaded) AND (NOT Fault) THEN
+      
+      IF (Op = 49) AND ((NOT Unloaded) OR (FakeMounted)) THEN
       BEGIN
+         LoadTape(WReg);  (* Hack: Load a new tape *)
+         IF NOT Unloaded THEN FakeMounted := FALSE;
+      END ELSE
+      IF (Op > 5) AND (Fault OR Unloaded) THEN
+      BEGIN
+         Status0 := INTERVENTION_0;
+         WITH State8000 DO IR := IR OR (LONGINT(1) SHL (31-_IntNo));
+      END ELSE
+      BEGIN
+          Status0 := 0;
           PushF;
           InterruptsOn;
-          CASE (Modif SHL 2)+1 OF
+          CASE Op OF
                1:     BEGIN END; (* Set Trail, ignored *)
                5:     LastCore := (WReg SHR 9) SHL 1;
                9:     MoveTape(WReg);
               13, 45: InputData(WReg);
               17    : BEGIN END;  (* Output odd, ignored *)
-              49    : LoadTape(WReg);  (* Hack: Load a new tape *)
               21:     BEGIN
                          Status0 := HIGHDENSITY_0;
                          WITH State8000 DO IR := IR OR (LONGINT(1) SHL (31-_IntNo));
